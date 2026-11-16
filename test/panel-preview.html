@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<title>面板預覽</title>
+<link rel="stylesheet" href="../content/panel.css">
+<style>
+  html { background:#0f0f0f; }
+  body { margin:0; padding:24px; font-family:"Noto Sans TC",system-ui,sans-serif;
+         display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+  .col { width:402px; }
+  h2 { color:#aaa; font-size:13px; font-weight:600; margin:0 0 8px; }
+</style>
+</head>
+<body>
+<div class="col"><h2>完成畫面</h2><div id="a"></div></div>
+<div class="col"><h2>段落複習畫面</h2><div id="b"></div></div>
+
+<script src="../content/lib.js"></script>
+<script src="../shared/anki.js"></script>
+<script src="../content/panel.js"></script>
+<script>
+const P = LY.Panel;
+const handlers = { restart:()=>{}, exportCsv:()=>{}, star:()=>{}, continue:()=>{},
+                   replaySegment:()=>{}, playSentence:()=>{}, toggleEnabled:()=>{}, openOptions:()=>{} };
+
+P.reflow = () => {};              // 預覽頁沒有 YouTube 版面，不要讓面板搬家
+function renderInto(container, vm) {
+  P.root = null;
+  P.mount(handlers);
+  // mount() 找不到側欄會自動改成浮動（position:fixed），預覽頁要固定在欄位裡看
+  P.root.classList.remove('ly-floating');
+  container.appendChild(P.root);
+  P.render(vm);
+  P.root = null;
+}
+
+renderInto(document.getElementById('a'), {
+  kind:'done', enabled:true, total:15, segment:null,
+  stats:{ title:'Everyday Conversation In Slow French | Super Easy French 161',
+          total:15, reviewed:15, duration:442, words:84, phrases:23, starred:12 }
+});
+
+renderInto(document.getElementById('b'), {
+  kind:'result', enabled:true, total:15, cached:false,
+  segment:{ index:4, start:229, end:259 },
+  data:{
+    sentences:[
+      {text:"Oui, j'étais de garde à l'hôpital tout le week-end.", translation:'對啊，我整個週末都在醫院值班。', start_line:0, end_line:1},
+      {text:'Oh, ma pauvre !', translation:'喔，真可憐！', start_line:1, end_line:1}
+    ],
+    vocab:[
+      {word:'garde', lemma:'garde', pos:'n.f.', meaning:'值班、看守', note:'être de garde 表示在值班'},
+      {word:'récupéré', lemma:'récupérer', pos:'v.', meaning:'恢復體力、復原', note:'此處使用複合過去式'}
+    ],
+    phrases:[{phrase:'ma pauvre', meaning:'真可憐、辛苦了', note:'對女性表達同情時的親切稱呼'}],
+    notes:['ma pauvre 為陰性用法，若對男性說則為 mon pauvre。',
+           "j'étais de garde 使用未完成過去式 (Imparfait) 描述當時持續的狀態。"]
+  }
+});
+</script>
+</body>
+</html>

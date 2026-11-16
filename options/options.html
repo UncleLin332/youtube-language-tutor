@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<title>YouTube 語言學習助手 · 設定</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fff; --fg:#111; --dim:#666; --line:#ddd; --card:#fafafa; --accent:#7c5cff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141414; --fg:#f1f1f1; --dim:#999; --line:#333; --card:#1d1d1d; }
+  }
+  body { background:var(--bg); color:var(--fg); font-family:"Noto Sans TC",system-ui,sans-serif;
+         margin:0; padding:40px 20px; line-height:1.6; }
+  main { max-width: 620px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:28px; }
+  label { display:block; font-weight:600; font-size:13px; margin-bottom:4px; }
+  .hint { color:var(--dim); font-size:12px; margin-top:4px; }
+  .row { margin-bottom:20px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px;
+    border:1px solid var(--line); background:var(--card); color:var(--fg); font-size:14px; font-family:inherit;
+  }
+  .two { display:flex; gap:12px; }
+  .two > div { flex:1; }
+  .provider-block[hidden] { display:none; }
+  button { border:1px solid var(--line); background:var(--card); color:var(--fg);
+           border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  button:hover { filter:brightness(1.08); }
+  .bar { display:flex; gap:8px; align-items:center; margin-top:26px; }
+  .status { color:var(--dim); font-size:13px; }
+  .ok { color:#2a9d5c; } .err { color:#d64545; }
+  hr { border:0; border-top:1px solid var(--line); margin:30px 0; }
+  .check { display:flex; align-items:center; gap:8px; font-weight:400; }
+</style>
+</head>
+<body>
+<main>
+  <h1>YouTube 語言學習助手</h1>
+  <div class="sub">影片每播放一段就自動暫停，整理單字片語，再帶你一句一句複習。</div>
+
+  <div class="row">
+    <label for="provider">AI 供應商</label>
+    <select id="provider">
+      <option value="anthropic">Claude（Anthropic）</option>
+      <option value="gemini">Gemini（Google）</option>
+    </select>
+  </div>
+
+  <div class="row two provider-block" data-provider="anthropic">
+    <div>
+      <label for="anthropicKey">Anthropic API key</label>
+      <input id="anthropicKey" type="password" placeholder="sk-ant-..." autocomplete="off">
+      <div class="hint">到 console.anthropic.com 申請。</div>
+    </div>
+    <div>
+      <label for="anthropicModel">模型</label>
+      <select id="anthropicModel">
+        <option value="claude-opus-5-5">Claude Opus 5.5（品質最好）</option>
+        <option value="claude-sonnet-5-5">Claude Sonnet 5.5（較便宜）</option>
+        <option value="claude-haiku-5-5">Claude Haiku 5.5（最便宜・最快）</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row two provider-block" data-provider="gemini">
+    <div>
+      <label for="geminiKey">Gemini API key</label>
+      <input id="geminiKey" type="password" placeholder="AIza..." autocomplete="off">
+      <div class="hint">到 aistudio.google.com 申請。</div>
+    </div>
+    <div>
+      <label for="geminiModel">模型</label>
+      <select id="geminiModel">
+        <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite（預設・最快最便宜）</option>
+        <option value="gemini-3.8-flash">Gemini 3.8 Flash（穩定版）</option>
+        <option value="gemini-4-hydrogen">Gemini 4 Hydrogen（最新・最貴）</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="hint">API key 只存在這台電腦的瀏覽器裡（chrome.storage.local），不會傳去其他地方。</div>
+  </div>
+
+  <div class="row two">
+    <div>
+      <label for="targetLang">學習語言</label>
+      <select id="targetLang"></select>
+    </div>
+    <div>
+      <label for="nativeLang">解釋用語言</label>
+      <input id="nativeLang" type="text" placeholder="繁體中文">
+    </div>
+  </div>
+
+  <div class="row two">
+    <div>
+      <label for="segmentSeconds">每段長度（秒）</label>
+      <input id="segmentSeconds" type="number" min="10" max="180" step="5">
+      <div class="hint">實際會延到最近的句尾才停。</div>
+    </div>
+    <div>
+      <div class="hint" style="margin-top:28px">分析結果會以「影片＋模型＋段落」為鍵快取，同一段不會重複付費。</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <label class="check"><input id="autoPause" type="checkbox"> 預設開啟自動暫停</label>
+  </div>
+
+  <div class="bar">
+    <button class="primary" id="save">儲存</button>
+    <button id="test">測試 API key</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <hr>
+
+  <h1 style="font-size:16px">生字本</h1>
+  <div class="sub" id="bookCount">載入中…</div>
+  <div class="bar" style="margin-top:0">
+    <button id="exportBook">匯出 Anki CSV</button>
+    <button id="clearBook">清空生字本</button>
+    <button id="clearCache">清除分析快取</button>
+    <span class="status" id="status2"></span>
+  </div>
+</main>
+<script src="../shared/anki.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

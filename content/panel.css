@@ -1,0 +1,144 @@
+.ly-panel {
+  --ly-bg: #0f0f0f;
+  --ly-card: #1d1d1d;
+  --ly-line: #303030;
+  --ly-fg: #f1f1f1;
+  --ly-dim: #aaa;
+  --ly-accent: #7c5cff;
+  margin: 0 0 16px 0;
+  border: 1px solid var(--ly-line);
+  border-radius: 12px;
+  background: var(--ly-bg);
+  color: var(--ly-fg);
+  font-family: "Roboto", "Noto Sans TC", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow: hidden;
+}
+html:not([dark]) .ly-panel {
+  --ly-bg: #fff; --ly-card: #f7f7f7; --ly-line: #ddd; --ly-fg: #0f0f0f; --ly-dim: #606060;
+}
+.ly-panel.ly-floating {
+  position: fixed; top: 72px; right: 16px;
+  width: min(360px, calc(100vw - 24px)); max-height: 72vh;
+  z-index: 2147483000; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.ly-panel.ly-floating .ly-body { max-height: 46vh; }
+
+.ly-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-bottom: 1px solid var(--ly-line);
+  background: linear-gradient(180deg, rgba(124,92,255,.14), transparent);
+}
+.ly-brand { font-weight: 700; letter-spacing: .02em; }
+.ly-segname { color: var(--ly-dim); font-size: 12px; }
+.ly-spacer { flex: 1; }
+.ly-icon {
+  background: transparent; border: 1px solid transparent; color: var(--ly-dim);
+  border-radius: 6px; padding: 3px 7px; cursor: pointer; font-size: 12px; font-family: inherit;
+}
+.ly-icon:hover { background: var(--ly-card); color: var(--ly-fg); }
+.ly-icon.on { color: var(--ly-accent); border-color: var(--ly-accent); }
+
+.ly-body { padding: 12px; max-height: 60vh; overflow-y: auto; }
+.ly-panel.ly-collapsed .ly-body, .ly-panel.ly-collapsed .ly-foot { display: none; }
+
+.ly-msg { color: var(--ly-dim); display: flex; align-items: center; gap: 8px; padding: 6px 2px; }
+.ly-msg.ly-err { color: #ff8080; }
+.ly-spin {
+  width: 13px; height: 13px; border-radius: 50%; flex: none;
+  border: 2px solid var(--ly-line); border-top-color: var(--ly-accent);
+  animation: ly-spin .8s linear infinite;
+}
+@keyframes ly-spin { to { transform: rotate(360deg); } }
+
+.ly-chips { display: flex; gap: 6px; margin-bottom: 10px; }
+.ly-chip {
+  border: 1px solid var(--ly-line); background: transparent; color: var(--ly-dim);
+  border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.ly-chip.on { color: var(--ly-accent); border-color: var(--ly-accent); background: rgba(124,92,255,.1); }
+
+.ly-sec { margin: 0 0 14px; }
+.ly-sec h4 {
+  margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: none;
+  color: var(--ly-dim); letter-spacing: .06em;
+}
+.ly-sec h4 small { font-weight: 400; margin-left: 6px; opacity: .7; }
+
+.ly-sents { list-style: none; margin: 0; padding: 0; counter-reset: ly; }
+.ly-sent {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 7px 8px; border-radius: 8px; cursor: pointer;
+}
+.ly-sent:hover { background: var(--ly-card); }
+.ly-sent-main { flex: 1; min-width: 0; }
+.ly-fr { font-size: 14px; }
+.ly-zh { color: var(--ly-dim); font-size: 12.5px; margin-top: 2px; }
+.ly-panel.ly-hide-zh .ly-sent:not(.ly-revealed) .ly-zh,
+.ly-panel.ly-dictation .ly-sent:not(.ly-revealed) .ly-fr {
+  filter: blur(5px); user-select: none;
+}
+.ly-sent-tools { display: flex; gap: 4px; flex: none; opacity: 0; }
+.ly-sent:hover .ly-sent-tools { opacity: 1; }
+
+.ly-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ly-card { background: var(--ly-card); border-radius: 8px; padding: 8px 10px; }
+.ly-card-head { display: flex; align-items: baseline; gap: 6px; }
+.ly-word { font-size: 14px; }
+.ly-lemma, .ly-pos { color: var(--ly-dim); font-size: 11.5px; }
+.ly-pos { font-style: italic; }
+.ly-mean { margin-top: 2px; }
+.ly-note { color: var(--ly-dim); font-size: 12px; margin-top: 3px; }
+.ly-notes { margin: 0; padding-left: 18px; color: var(--ly-fg); }
+.ly-notes li { margin-bottom: 4px; }
+.ly-foot-note { color: var(--ly-dim); font-size: 11.5px; margin-top: 8px; }
+
+.ly-mini {
+  border: 1px solid var(--ly-line); background: transparent; color: var(--ly-dim);
+  border-radius: 6px; padding: 1px 6px; font-size: 11.5px; cursor: pointer; font-family: inherit;
+}
+.ly-mini:hover { color: var(--ly-fg); border-color: var(--ly-dim); }
+.ly-star.saved { color: #ffcc44; border-color: #ffcc44; }
+
+.ly-foot {
+  display: flex; gap: 8px; padding: 10px 12px;
+  border-top: 1px solid var(--ly-line); background: var(--ly-card);
+}
+.ly-btn {
+  flex: 1; border: 1px solid var(--ly-line); background: transparent; color: var(--ly-fg);
+  border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 12.5px; font-family: inherit;
+  white-space: nowrap;
+}
+.ly-foot-wrap { flex-wrap: wrap; }
+.ly-btn.ly-wide { flex: 1 0 100%; }
+.ly-btn:hover { border-color: var(--ly-dim); }
+.ly-btn.ly-primary { background: var(--ly-accent); border-color: var(--ly-accent); color: #fff; font-weight: 600; }
+.ly-btn.ly-primary:hover { filter: brightness(1.1); }
+
+/* 完成畫面 */
+.ly-done { text-align: center; padding: 10px 4px 4px; }
+.ly-done-icon { font-size: 34px; line-height: 1.2; }
+.ly-done-title { font-size: 16px; font-weight: 700; margin-top: 4px; }
+.ly-done-sub {
+  color: var(--ly-dim); font-size: 12px; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ly-stats {
+  margin-top: 14px; border: 1px solid var(--ly-line); border-radius: 10px;
+  overflow: hidden; text-align: left;
+}
+.ly-stat {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 7px 12px; border-bottom: 1px solid var(--ly-line);
+}
+.ly-stat:last-child { border-bottom: 0; }
+.ly-stat-k { color: var(--ly-dim); font-size: 12.5px; }
+.ly-stat-v { font-weight: 600; }
+.ly-done-hint { color: var(--ly-dim); font-size: 12px; margin-top: 12px; }
+.ly-btn.ly-disabled { opacity: .45; cursor: default; }
+.ly-btn.ly-disabled:hover { border-color: var(--ly-line); filter: none; }
+
+/* 文法重點列 */
+.ly-notes li { display: flex; gap: 8px; align-items: flex-start; }
+.ly-note-text { flex: 1; }

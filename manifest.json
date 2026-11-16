@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube 語言學習助手",
+  "version": "0.1.0",
+  "description": "每隔一段時間自動暫停 YouTube 影片，整理該段的單字與片語，並帶你一句一句複習。",
+  "permissions": [
+    "storage",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "YouTube 語言學習助手（點擊開啟設定）"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.youtube.com/*"
+      ],
+      "js": [
+        "content/bridge.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "*://www.youtube.com/*"
+      ],
+      "js": [
+        "content/lib.js",
+        "shared/anki.js",
+        "content/transcript.js",
+        "content/segmenter.js",
+        "content/panel.js",
+        "content/app.js"
+      ],
+      "css": [
+        "content/panel.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
