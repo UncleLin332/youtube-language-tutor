@@ -40,6 +40,18 @@
 | `shared/anki.js` | 匯出成 Anki 可直接匯入的 CSV（面板與設定頁共用） |
 | `options/` | 設定頁與生字本 |
 
+## 開發用的測試
+
+```bash
+node test/export-test.js        # 載入真正的 app.js，驗證收藏 → 匯出的完整流程
+python3 -m http.server 8731     # 然後開 test/panel-preview.html 看面板外觀
+                                # test/api-test.html 可以貼 key 打一次真實 API
+```
+
+`export-test.js` 存在的理由：匯出流程壞過兩次，兩次讀程式碼都看不出來——
+面板的按鈕呼叫 `exportCsv('starred')`，但 `exportCsv` 沒接那個參數，
+呼叫端和被呼叫端各自都沒錯，參數就這樣掉在地上。只有真的跑起來才會發現。
+
 ## 關於 API 與費用
 
 兩家都支援，在設定頁切換；兩邊的 key 和模型各自記住，隨時可以換回來。
