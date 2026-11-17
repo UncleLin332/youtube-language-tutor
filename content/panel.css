@@ -151,3 +151,8 @@ html:not([dark]) .ly-panel {
 .ly-raw { color: var(--ly-dim); font-size: 13px; }
 .ly-raw-line { padding: 3px 0; border-bottom: 1px solid var(--ly-line); }
 .ly-raw-line:last-child { border-bottom: 0; }
+
+/* 還沒啟動時的畫面 */
+.ly-launch { padding: 6px 2px; }
+.ly-launch-title { font-size: 14px; font-weight: 600; }
+.ly-launch-sub { color: var(--ly-dim); font-size: 12.5px; margin-top: 6px; }

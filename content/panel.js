@@ -84,12 +84,17 @@
         : (vm.total ? `共 ${vm.total} 段` : '')
     });
     const spacer = el('span', { class: 'ly-spacer' });
-    const pauseBtn = el('button', {
+    const running = vm.kind !== 'launcher';
+    const pauseBtn = running ? el('button', {
       class: 'ly-icon' + (vm.enabled ? ' on' : ''),
       title: vm.enabled ? '自動暫停：開（點擊關閉）' : '自動暫停：關（點擊開啟）',
       text: vm.enabled ? '⏸ 自動' : '▷ 連續',
       onclick: () => P.on.toggleEnabled && P.on.toggleEnabled()
-    });
+    }) : null;
+    const stopBtn = running ? el('button', {
+      class: 'ly-icon', title: '結束這部影片的學習模式', text: '⏹',
+      onclick: () => P.on.stop && P.on.stop()
+    }) : null;
     const gear = el('button', {
       class: 'ly-icon', title: '設定', text: '⚙',
       onclick: () => P.on.openOptions && P.on.openOptions()
@@ -98,7 +103,7 @@
       class: 'ly-icon', title: '收合', text: '–',
       onclick: () => P.root.classList.toggle('ly-collapsed')
     });
-    return [title, seg, spacer, pauseBtn, gear, fold];
+    return [title, seg, spacer, pauseBtn, stopBtn, gear, fold];
   }
 
   function toggles() {
@@ -205,7 +210,18 @@
     P.foot.textContent = '';
     P.foot.classList.remove('ly-foot-wrap');
 
-    if (vm.kind === 'loading') {
+    if (vm.kind === 'launcher') {
+      P.body.appendChild(el('div', { class: 'ly-launch' }, [
+        el('div', { class: 'ly-launch-title', text: '要用這部影片學語言嗎？' }),
+        el('div', { class: 'ly-launch-sub', text:
+          '啟動後會抓字幕、每隔一段自動暫停並整理單字片語。沒按之前完全不會動作，也不會用到 API。' })
+      ]));
+      P.foot.appendChild(el('button', {
+        class: 'ly-btn ly-wide ly-primary', text: '開始學習這部影片',
+        onclick: () => P.on.start && P.on.start()
+      }));
+      P.foot.classList.add('ly-foot-wrap');
+    } else if (vm.kind === 'loading') {
       P.body.appendChild(el('div', { class: 'ly-msg' }, [el('span', { class: 'ly-spin' }), vm.msg || '處理中…']));
       if (vm.lines && vm.lines.length) {
         P.body.appendChild(el('section', { class: 'ly-sec' }, [

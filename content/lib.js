@@ -11,7 +11,8 @@
     segmentSeconds: 30,
     targetLang: 'fr',
     nativeLang: '繁體中文',
-    autoPause: true
+    autoPause: true,
+    autoStart: false     // 預設每支影片都要自己按「開始學習」
   };
 
   // 把設定收斂成背景程序要的那幾個欄位

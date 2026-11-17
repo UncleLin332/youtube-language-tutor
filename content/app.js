@@ -18,6 +18,8 @@
     enabled: true,
     analyses: new Map(), // segIndex -> {data, cached}
     inflight: new Map(), // segIndex -> Promise（正在送的請求）
+    active: false,       // 使用者按下「開始學習」了沒
+    routed: false,        // 這支影片的面板掛上去了沒
     waitingFor: -1,      // 已經播過邊界、但筆記還沒好的那一段
     waitUntil: 0,        // 寬限期的截止秒數
     collected: [],
@@ -352,6 +354,8 @@
       else if (Panel.last) Panel.render(Object.assign({}, Panel.last, { enabled: S.enabled }));
       else renderWatching();
     },
+    start,
+    stop,
     openOptions: () => chrome.runtime.sendMessage({ type: 'openOptions' }),
     exportCsv,
     restart,
@@ -368,7 +372,10 @@
     }
     S.video = null; S.cues = null; S.segments = null; S.armed = -1; S.current = -1;
     S.mode = 'idle'; S.range = null; S.analyses = new Map(); S.inflight = new Map();
+    if (S.active) setBadge(false);
+    S.active = false; S.routed = false; S.waitingFor = -1;
     S.collected = []; S.starred = []; S.times = null;
+    S.token = Symbol('detached');   // 作廢還在路上的預抓，回來時不會再寫進狀態
     clearTimeout(aheadTimer);
     Panel.unmount();
   }
@@ -376,20 +383,37 @@
   async function route() {
     const v = location.pathname === '/watch' ? new URLSearchParams(location.search).get('v') : null;
     if (!v) { if (S.videoId) { S.videoId = null; detach(); } return; }
-    if (v === S.videoId && S.segments) return;
+    if (v === S.videoId && S.routed) return;
 
     detach();
     S.videoId = v;
-    const token = (S.token = Symbol('route'));
+    S.routed = true;
+    S.token = Symbol('route');
     S.settings = await LY.getSettings();
     S.enabled = S.settings.autoPause !== false;
 
+    // 不是每支影片都是拿來學語言的。預設什麼都不做：不抓字幕、不碰轉錄稿面板、
+    // 不呼叫 API，只掛一個啟動按鈕在旁邊等你按。
+    Panel.mount(handlers);
+    renderLauncher();
+    if (S.settings.autoStart) start();
+  }
+
+  function renderLauncher() {
+    Panel.render({ kind: 'launcher', active: false, enabled: S.enabled, total: 0 });
+  }
+
+  async function start() {
+    if (S.active || !S.videoId) return;
+    S.active = true;
+    setBadge(true);
+    const token = S.token;
+
     const video = await LY.waitFor(() => document.querySelector('video.html5-main-video') || document.querySelector('video'), 15000);
-    if (!video || S.token !== token) return;
+    if (!video || S.token !== token) { S.active = false; setBadge(false); return; }
     S.video = video;
 
-    Panel.mount(handlers);
-    Panel.render({ kind: 'loading', msg: '正在取得字幕…', total: 0, enabled: S.enabled });
+    Panel.render({ kind: 'loading', msg: '正在取得字幕…', total: 0, enabled: S.enabled, active: true });
 
     try {
       const r = await LY.loadCues(S.settings);
@@ -398,7 +422,9 @@
         const hint = r.available && r.available.length
           ? `這部影片有字幕（${r.available.join('、')}），但抓不到內容，試著重新整理頁面。`
           : '這部影片沒有可用的字幕，無法分析。';
-        Panel.render({ kind: 'error', msg: hint, total: 0, enabled: S.enabled });
+        S.active = false;
+        setBadge(false);
+        Panel.render({ kind: 'error', msg: hint, total: 0, enabled: S.enabled, active: true });
         return;
       }
       S.cues = r.cues;
@@ -425,8 +451,24 @@
       });
       LY.log('字幕', r.cues.length, '行 →', S.segments.length, '段（來源：' + r.source + '）');
     } catch (e) {
-      Panel.render({ kind: 'error', msg: String(e.message || e), total: 0, enabled: S.enabled });
+      S.active = false;
+      setBadge(false);
+      Panel.render({ kind: 'error', msg: String(e.message || e), total: 0, enabled: S.enabled, active: true });
     }
+  }
+
+  // 結束：回到只有啟動按鈕的狀態，之後不會再自己動作
+  function stop() {
+    const v = S.videoId;
+    detach();
+    S.videoId = v;
+    S.routed = true;
+    Panel.mount(handlers);
+    renderLauncher();
+  }
+
+  function setBadge(on) {
+    try { chrome.runtime.sendMessage({ type: 'setBadge', on: !!on }); } catch (e) { /* 背景沒反應也無所謂 */ }
   }
 
   chrome.storage.onChanged.addListener(async (changes, area) => {
@@ -440,6 +482,14 @@
       arm(S.video.currentTime);
       Panel.render({ kind: 'ready', total: S.segments.length, sourceLabel: S.sourceLabel, enabled: S.enabled });
     }
+  });
+
+  // 工具列圖示：播放中隨時可以開關
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (!msg || msg.type !== 'toggle') return;
+    if (!S.videoId) { sendResponse({ ok: false, reason: 'not-watch-page' }); return; }
+    if (S.active) stop(); else start();
+    sendResponse({ ok: true, active: S.active });
   });
 
   window.addEventListener('yt-navigate-finish', () => setTimeout(route, 500));

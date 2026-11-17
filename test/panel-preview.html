@@ -13,6 +13,7 @@
 </style>
 </head>
 <body>
+<div class="col"><h2>啟動前</h2><div id="c"></div></div>
 <div class="col"><h2>完成畫面</h2><div id="a"></div></div>
 <div class="col"><h2>段落複習畫面</h2><div id="b"></div></div>
 
@@ -34,6 +35,8 @@ function renderInto(container, vm) {
   P.render(vm);
   P.root = null;
 }
+
+renderInto(document.getElementById('c'), { kind:'launcher', active:false, enabled:true, total:0 });
 
 renderInto(document.getElementById('a'), {
   kind:'done', enabled:true, total:15, segment:null,

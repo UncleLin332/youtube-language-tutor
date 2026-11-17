@@ -50,6 +50,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
+  // 啟動中的分頁在圖示上顯示 ON，才知道這支影片正在被處理
+  if (msg.type === 'setBadge') {
+    const tabId = sender && sender.tab && sender.tab.id;
+    if (tabId != null) {
+      chrome.action.setBadgeText({ tabId, text: msg.on ? 'ON' : '' });
+      chrome.action.setBadgeBackgroundColor({ tabId, color: '#7c5cff' });
+    }
+    return;
+  }
+
   if (msg.type === 'clearCache') {
     chrome.storage.local.get(null).then(async (all) => {
       const keys = Object.keys(all).filter((k) => /^v\d+:/.test(k));
@@ -60,4 +70,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
+// 分頁換頁時把徽章清掉，否則離開 YouTube 之後圖示還會一直顯示 ON。
+// 只看 status，不讀 url（讀 url 需要 tabs 權限）；真的重新啟動時 content script 會再設回來。
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status === 'loading') {
+    chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {});
+  }
+});
+
+// 點工具列圖示＝在這支影片上開關擴充。
+// 不讀 tab.url（那需要額外的 tabs 權限），直接問 content script：
+// 它不在影片頁、或根本還沒載入，就退回開設定頁。
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab || tab.id == null) { chrome.runtime.openOptionsPage(); return; }
+  try {
+    const res = await chrome.tabs.sendMessage(tab.id, { type: 'toggle' });
+    if (!res || !res.ok) chrome.runtime.openOptionsPage();
+  } catch (e) {
+    chrome.runtime.openOptionsPage();
+  }
+});

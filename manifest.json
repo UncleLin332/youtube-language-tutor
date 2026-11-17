@@ -16,7 +16,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "YouTube 語言學習助手（點擊開啟設定）"
+    "default_title": "YouTube 語言學習助手（在影片頁點一下開關）"
   },
   "options_ui": {
     "page": "options/options.html",
