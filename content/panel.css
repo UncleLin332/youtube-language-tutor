@@ -156,3 +156,8 @@ html:not([dark]) .ly-panel {
 .ly-launch { padding: 6px 2px; }
 .ly-launch-title { font-size: 14px; font-weight: 600; }
 .ly-launch-sub { color: var(--ly-dim); font-size: 12.5px; margin-top: 6px; }
+
+/* 句子的收藏鈕：平常淡淡的，hover 或收藏後變明顯 */
+.ly-sent-star { flex: none; opacity: .35; align-self: flex-start; }
+.ly-sent:hover .ly-sent-star { opacity: .8; }
+.ly-sent-star.saved { opacity: 1; }

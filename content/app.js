@@ -199,7 +199,8 @@
   }
 
   function entry(data, at, o) {
-    const ex = o.type === 'grammar' ? null : findExample(data, o.word);
+    // 句子本身就是例句，再去找會變成重複；文法重點也不需要
+    const ex = (o.type === 'grammar' || o.type === 'sentence') ? null : findExample(data, o.word);
     return Object.assign({
       lemma: '', pos: '', meaning: '', note: '',
       example: ex ? ex.example : '', exampleZh: ex ? ex.exampleZh : '',

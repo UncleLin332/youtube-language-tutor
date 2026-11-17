@@ -132,7 +132,20 @@
         el('button', { class: 'ly-mini', text: '0.75×', title: '放慢跟讀',
           onclick: (e) => { e.stopPropagation(); P.on.playSentence && P.on.playSentence(s, 0.75, i); } })
       ]);
-      const li = el('li', { class: 'ly-sent' }, [main, tools]);
+      // 星號放在 tools 之外：tools 平常是透明的（hover 才顯示），
+      // 但收藏要隨時看得到才會有人用
+      const star = el('button', {
+        class: 'ly-mini ly-star ly-sent-star', text: '★', title: '收藏這個句子',
+        onclick: (e) => {
+          e.stopPropagation();
+          e.currentTarget.classList.add('saved');
+          P.on.star && P.on.star({
+            type: 'sentence', word: s.text, meaning: s.translation || '',
+            lemma: '', pos: '', note: ''
+          });
+        }
+      });
+      const li = el('li', { class: 'ly-sent' }, [main, tools, star]);
       li.addEventListener('click', () => {
         li.classList.add('ly-revealed');
         P.on.playSentence && P.on.playSentence(s, 1, i);
