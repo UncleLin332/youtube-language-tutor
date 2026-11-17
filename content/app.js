@@ -324,16 +324,35 @@
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  async function star(v) {
-    const got = await chrome.storage.local.get('wordbook');
-    const book = got.wordbook || [];
-    if (!book.some((b) => b.word === v.word && b.meaning === v.meaning)) {
-      book.push(Object.assign({}, v, {
-        video: S.title,
-        url: `https://youtu.be/${S.videoId}?t=${Math.floor((S.segments[S.current] || {}).start || 0)}`,
-        savedAt: Date.now()
-      }));
-      await chrome.storage.local.set({ wordbook: book });
+  // 同一個字可能在不同影片都收藏過，所以用「類型＋內容」當鍵，取消時再加上影片範圍
+  function starKey(type, word) { return (type || 'word') + '\u0000' + String(word || ''); }
+
+  function isStarred(type, word) {
+    const k = starKey(type, word);
+    return S.starred.some((x) => starKey(x.type, x.word) === k);
+  }
+
+  async function toggleStar(v, on) {
+    const seg = S.segments[S.current];
+    const got = S.analyses.get(S.current);
+    const item = Object.assign(
+      entry((got && got.data) || {}, seg ? seg.start : 0, v),
+      { savedAt: Date.now() }
+    );
+    const k = starKey(item.type, item.word);
+
+    // 這部影片的收藏清單（完成畫面的數字與「匯出收藏」都看這個）
+    S.starred = S.starred.filter((x) => starKey(x.type, x.word) !== k);
+    if (on) S.starred.push(item);
+
+    try {
+      const book = (await chrome.storage.local.get('wordbook')).wordbook || [];
+      // 只動這部影片的同一個項目，不要影響別部影片收藏的同一個字
+      const next = book.filter((b) => !(starKey(b.type, b.word) === k && b.video === item.video));
+      if (on) next.push(item);
+      await chrome.storage.local.set({ wordbook: next });
+    } catch (e) {
+      LY.log('生字本寫入失敗', e);
     }
   }
 
@@ -360,7 +379,8 @@
     openOptions: () => chrome.runtime.sendMessage({ type: 'openOptions' }),
     exportCsv,
     restart,
-    star
+    isStarred,
+    toggleStar
   };
 
   // ---------- 啟動／換頁 ----------

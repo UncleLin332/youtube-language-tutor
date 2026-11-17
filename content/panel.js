@@ -120,6 +120,25 @@
     ]);
   }
 
+  // 收藏鈕。狀態一律跟 app 查，不要只記在 DOM 的 class 上——
+  // 面板任何一次重繪（例如切換「顯示翻譯」）都會把 class 洗掉。
+  function starBtn(item, extraClass) {
+    const on = !!(P.on.isStarred && P.on.isStarred(item.type, item.word));
+    const b = el('button', {
+      class: 'ly-mini ly-star' + (extraClass ? ' ' + extraClass : '') + (on ? ' saved' : ''),
+      text: '★',
+      title: on ? '已收藏，點一下取消' : '加入生字本'
+    });
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = !b.classList.contains('saved');
+      b.classList.toggle('saved', next);
+      b.title = next ? '已收藏，點一下取消' : '加入生字本';
+      if (P.on.toggleStar) P.on.toggleStar(item, next);
+    });
+    return b;
+  }
+
   function sentenceList(vm) {
     const list = el('ol', { class: 'ly-sents' });
     (vm.data.sentences || []).forEach((s, i) => {
@@ -134,17 +153,10 @@
       ]);
       // 星號放在 tools 之外：tools 平常是透明的（hover 才顯示），
       // 但收藏要隨時看得到才會有人用
-      const star = el('button', {
-        class: 'ly-mini ly-star ly-sent-star', text: '★', title: '收藏這個句子',
-        onclick: (e) => {
-          e.stopPropagation();
-          e.currentTarget.classList.add('saved');
-          P.on.star && P.on.star({
-            type: 'sentence', word: s.text, meaning: s.translation || '',
-            lemma: '', pos: '', note: ''
-          });
-        }
-      });
+      const star = starBtn({
+        type: 'sentence', word: s.text, meaning: s.translation || '',
+        lemma: '', pos: '', note: ''
+      }, 'ly-sent-star');
       const li = el('li', { class: 'ly-sent' }, [main, tools, star]);
       li.addEventListener('click', () => {
         li.classList.add('ly-revealed');
@@ -163,13 +175,7 @@
         v.lemma && v.lemma !== v.word ? el('span', { class: 'ly-lemma', text: '← ' + v.lemma }) : null,
         v.pos ? el('i', { class: 'ly-pos', text: v.pos }) : null,
         el('span', { class: 'ly-spacer' }),
-        el('button', {
-          class: 'ly-mini ly-star', text: '★', title: '加入生字本',
-          onclick: (e) => {
-            e.currentTarget.classList.add('saved');
-            P.on.star && P.on.star(Object.assign({ type: 'word' }, v));
-          }
-        })
+        starBtn(Object.assign({ type: 'word' }, v))
       ]);
       const body = el('div', { class: 'ly-mean', text: v.meaning || '' });
       const note = v.note ? el('div', { class: 'ly-note', text: v.note }) : null;
@@ -185,13 +191,7 @@
         el('div', { class: 'ly-card-head' }, [
           el('b', { class: 'ly-word', text: p.phrase }),
           el('span', { class: 'ly-spacer' }),
-          el('button', {
-            class: 'ly-mini ly-star', text: '★', title: '加入生字本',
-            onclick: (e) => {
-            e.currentTarget.classList.add('saved');
-            P.on.star && P.on.star({ type: 'phrase', word: p.phrase, lemma: '', pos: '', meaning: p.meaning, note: p.note });
-          }
-          })
+          starBtn({ type: 'phrase', word: p.phrase, lemma: '', pos: '', meaning: p.meaning, note: p.note })
         ]),
         el('div', { class: 'ly-mean', text: p.meaning || '' }),
         p.note ? el('div', { class: 'ly-note', text: p.note }) : null
@@ -317,13 +317,7 @@
         P.body.appendChild(section('文法・重點', '可收藏', el('ul', { class: 'ly-notes' },
           d.notes.map((n) => el('li', {}, [
             el('span', { class: 'ly-note-text', text: n }),
-            el('button', {
-              class: 'ly-mini ly-star', text: '★', title: '加入生字本',
-              onclick: (e) => {
-                e.currentTarget.classList.add('saved');
-                P.on.star && P.on.star({ type: 'grammar', word: n, lemma: '', pos: '', meaning: '', note: '' });
-              }
-            })
+            starBtn({ type: 'grammar', word: n, lemma: '', pos: '', meaning: '', note: '' })
           ])))));
       }
       if (vm.cached) P.body.appendChild(el('div', { class: 'ly-foot-note', text: '（這段用的是之前的分析結果，沒有重新呼叫 API）' }));

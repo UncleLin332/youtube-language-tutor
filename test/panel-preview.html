@@ -22,8 +22,16 @@
 <script src="../content/panel.js"></script>
 <script>
 const P = LY.Panel;
-const handlers = { restart:()=>{}, exportCsv:()=>{}, star:()=>{}, continue:()=>{},
-                   replaySegment:()=>{}, playSentence:()=>{}, toggleEnabled:()=>{}, openOptions:()=>{} };
+// 用記憶體模擬 app 端的收藏狀態，才能驗證「取消收藏」與「重繪後狀態還在」
+const starred = new Set();
+const skey = (t, w) => t + '\u0000' + w;
+const handlers = {
+  restart:()=>{}, exportCsv:()=>{}, continue:()=>{},
+  replaySegment:()=>{}, playSentence:()=>{}, toggleEnabled:()=>{}, openOptions:()=>{},
+  isStarred: (t, w) => starred.has(skey(t, w)),
+  toggleStar: (item, on) => { on ? starred.add(skey(item.type, item.word)) : starred.delete(skey(item.type, item.word)); }
+};
+window.__starred = starred;
 
 P.reflow = () => {};              // 預覽頁沒有 YouTube 版面，不要讓面板搬家
 function renderInto(container, vm) {
