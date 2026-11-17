@@ -308,20 +308,20 @@
   }
 
   // ---------- 匯出 ----------
-  function csvEscape(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
-
-  function exportCsv() {
-    if (!S.collected.length) { alert('這部影片還沒有收集到單字。'); return; }
-    const rows = [['單字', '原形', '詞性', '解釋', '備註', '影片', '時間點']];
-    for (const c of S.collected) {
-      rows.push([c.word, c.lemma, c.pos, c.meaning, c.note, S.title,
-        `https://youtu.be/${S.videoId}?t=${Math.floor(c.at)}`]);
+  // scope: 'starred' = 你打過星號的（含句子與文法）；其餘 = 這部影片整理過的單字與片語
+  function exportCsv(scope) {
+    const starred = scope === 'starred';
+    const items = starred ? S.starred : S.collected;
+    if (!items.length) {
+      alert(starred
+        ? '還沒有收藏任何項目。點單字或句子旁邊的 ★ 就能收藏。'
+        : '這部影片還沒有整理到單字。');
+      return;
     }
-    const csv = '﻿' + rows.map((r) => r.map(csvEscape).join(',')).join('\r\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const a = LY.el('a', { href: url, download: `vocab-${S.videoId}.csv` });
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    LYAnki.download(
+      LYAnki.toCsv(items, { tag: 'YouTube' }),
+      `${LYAnki.safeName(S.title)}-${starred ? '收藏' : '全部'}.csv`
+    );
   }
 
   // 同一個字可能在不同影片都收藏過，所以用「類型＋內容」當鍵，取消時再加上影片範圍
