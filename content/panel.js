@@ -207,6 +207,14 @@
 
     if (vm.kind === 'loading') {
       P.body.appendChild(el('div', { class: 'ly-msg' }, [el('span', { class: 'ly-spin' }), vm.msg || '處理中…']));
+      if (vm.lines && vm.lines.length) {
+        P.body.appendChild(el('section', { class: 'ly-sec' }, [
+          el('h4', {}, ['這一段的原文', el('small', { text: '筆記好了會接在下面' })]),
+          el('div', { class: 'ly-raw' }, vm.lines.map((t) => el('div', { class: 'ly-raw-line', text: t })))
+        ]));
+        P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽整段',
+          onclick: () => P.on.replaySegment && P.on.replaySegment() }));
+      }
     } else if (vm.kind === 'error') {
       P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [vm.msg || '發生錯誤']));
       P.foot.appendChild(el('button', { class: 'ly-btn', text: '重試', onclick: () => P.on.retry && P.on.retry() }));
@@ -217,8 +225,23 @@
       ]));
     } else if (vm.kind === 'watching') {
       P.body.appendChild(el('div', { class: 'ly-msg' }, [
-        vm.nextStop != null ? `播放中…下一個停點 ${LY.fmtTime(vm.nextStop)}` : '播放中…已經是最後一段'
+        vm.waitingNotes ? '播放中…'
+          : vm.nextStop != null ? `播放中…下一個停點 ${LY.fmtTime(vm.nextStop)}`
+          : '播放中…已經是最後一段'
       ]));
+      if (vm.waitingNotes) {
+        P.body.appendChild(el('div', { class: 'ly-msg' }, [
+          el('span', { class: 'ly-spin' }),
+          '筆記還在整理，先讓影片繼續播 —— 好了就會停下來'
+        ]));
+      } else if (vm.nextStop != null) {
+        P.body.appendChild(vm.ready
+          ? el('div', { class: 'ly-msg ly-ok' }, [el('span', { class: 'ly-tick', text: '✓' }), '這一段已經整理好了，停下來就能直接開始'])
+          : el('div', { class: 'ly-msg' }, [
+              vm.pending ? el('span', { class: 'ly-spin' }) : null,
+              vm.pending ? '背景整理中…' : '等一下會在背景先整理好這一段'
+            ].filter(Boolean)));
+      }
     } else if (vm.kind === 'done') {
       const st = vm.stats || {};
       const row = (k, v) => el('div', { class: 'ly-stat' }, [

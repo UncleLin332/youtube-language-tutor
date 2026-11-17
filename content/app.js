@@ -17,10 +17,16 @@
     range: null,         // 單句播放中
     enabled: true,
     analyses: new Map(), // segIndex -> {data, cached}
+    inflight: new Map(), // segIndex -> Promise（正在送的請求）
+    waitingFor: -1,      // 已經播過邊界、但筆記還沒好的那一段
+    waitUntil: 0,        // 寬限期的截止秒數
     collected: [],
     starred: [],         // 這部影片打過星號的項目
     times: null          // 目前這段的「句子 → 時間」對應表
   };
+
+  // 筆記還沒好時最多讓影片多播幾秒；超過就還是停下來，改成先顯示這段的字幕原文
+  const PAUSE_GRACE_SECONDS = 20;
 
   // ---------- 播放控制 ----------
   function clampIdx(t) {
@@ -29,7 +35,14 @@
     return -1;
   }
 
-  function arm(t) { S.armed = clampIdx(t); }
+  function arm(t) {
+    const before = S.armed;
+    S.armed = clampIdx(t);
+    if (S.armed !== before) {
+      S.waitingFor = -1;
+      scheduleAhead();
+    }
+  }
 
   function onTimeUpdate() {
     if (!S.video || !S.segments) return;
@@ -43,7 +56,21 @@
 
     const seg = S.segments[S.armed];
     if (!seg) return;
-    if (t >= seg.end - 0.05) enterReview(S.armed);
+    if (t < seg.end - 0.05) return;
+
+    // 到邊界了，但筆記還沒整理好：先讓影片繼續播，不要停下來乾等。
+    // 筆記一到（下一個 timeupdate 最多 0.25 秒後）就會停，所以停下來一定是能馬上學的狀態。
+    if (!S.analyses.has(S.armed)) {
+      if (S.waitingFor !== S.armed) {
+        S.waitingFor = S.armed;
+        S.waitUntil = t + PAUSE_GRACE_SECONDS;
+        prefetch(S.armed);          // 保險：確定這一段真的在跑
+        renderWatching();
+      }
+      if (t < S.waitUntil) return;  // 還在寬限期內，繼續播
+    }
+    S.waitingFor = -1;
+    enterReview(S.armed);
   }
 
   function onSeeked() {
@@ -86,7 +113,14 @@
     const cached = S.analyses.get(i);
     if (cached) { renderResult(i, cached); prefetch(i + 1); return; }
 
-    Panel.render({ kind: 'loading', msg: '正在整理這段的單字與句子…', segment: seg, total: S.segments.length, enabled: S.enabled });
+    Panel.render({
+      kind: 'loading',
+      msg: '正在整理這段的單字與句子…',
+      lines: seg.lines.map((l) => l.text),   // 筆記還沒到，先給原文可以讀、可以重聽
+      segment: seg,
+      total: S.segments.length,
+      enabled: S.enabled
+    });
     try {
       const r = await requestAnalysis(i);
       if (S.mode !== 'review' || S.current !== i) return;
@@ -97,7 +131,25 @@
     }
   }
 
-  async function requestAnalysis(i) {
+  // 同一段可能同時被「預抓」和「暫停時的即時需求」要求。
+  // 沒有去重的話會送出兩次請求：付兩次錢，而且後送的那次還比較慢。
+  function requestAnalysis(i) {
+    if (S.analyses.has(i)) return Promise.resolve(S.analyses.get(i));
+    const running = S.inflight.get(i);
+    if (running) return running;
+
+    const p = sendAnalysis(i).then(
+      (res) => { S.inflight.delete(i); return res; },
+      (err) => { S.inflight.delete(i); throw err; }
+    );
+    S.inflight.set(i, p);
+    return p;
+  }
+
+  async function sendAnalysis(i) {
+    // 預抓的請求可能在使用者已經切到下一支影片之後才回來，
+    // 那時 S.analyses / S.collected 已經是新影片的了，不能寫進去。
+    const token = S.token;
     const seg = S.segments[i];
     const res = await chrome.runtime.sendMessage({
       type: 'analyze',
@@ -105,17 +157,35 @@
       settings: LY.resolve(S.settings),
       segment: { start: seg.start, end: seg.end, lines: seg.lines.map((l) => ({ i: l.i, text: l.text })) }
     });
+    if (S.token !== token) throw new Error('已經切換到別的影片');
     if (!res) throw new Error('背景程序沒有回應，請重新整理頁面。');
     if (res.error) throw new Error(res.error);
     S.analyses.set(i, res);
     collect(i, res.data);
+    if (S.mode === 'watching' && i === S.armed) renderWatching();
     return res;
   }
 
   function prefetch(i) {
-    if (!S.segments || i >= S.segments.length || S.analyses.has(i)) return;
+    if (!S.segments || i < 0 || i >= S.segments.length) return;
+    if (S.analyses.has(i) || S.inflight.has(i)) return;
     if (!LY.resolve(S.settings).apiKey) return;
     requestAnalysis(i).catch(() => {});
+  }
+
+  // 使用者正在看第 N 段時，背景就先把第 N 段整理好，時間到就能直接開始複習。
+  // 順便也抓第 N+1 段，複習完按繼續同樣不用等。
+  function ensureAhead() {
+    if (!S.enabled || !S.segments || S.armed < 0) return;
+    prefetch(S.armed);
+    prefetch(S.armed + 1);
+  }
+
+  // 拖動進度條時 arm() 會連續觸發，延遲一下再抓，免得抓了一堆用不到的段落
+  let aheadTimer = null;
+  function scheduleAhead(delay) {
+    clearTimeout(aheadTimer);
+    aheadTimer = setTimeout(ensureAhead, delay == null ? 1200 : delay);
   }
 
   // 找一句包含這個詞的例句，當作卡片的例句
@@ -173,6 +243,9 @@
     Panel.render({
       kind: 'watching',
       nextStop: next ? next.end : null,
+      ready: S.armed >= 0 && S.analyses.has(S.armed),
+      pending: S.armed >= 0 && S.inflight.has(S.armed),
+      waitingNotes: S.waitingFor >= 0 && S.waitingFor === S.armed,
       segment: null,
       total: S.segments ? S.segments.length : 0,
       enabled: S.enabled
@@ -222,7 +295,9 @@
       showDone();
       return;
     }
-    if (seg && Math.abs(S.video.currentTime - seg.end) > 1.5) S.video.currentTime = seg.end;
+    // 只往前對齊：單句播放會把游標留在段落中間，要拉到段尾；
+    // 但寬限期多播過頭時不能倒帶，否則剛看過的內容會重播一次
+    if (seg && S.video.currentTime < seg.end - 1.5) S.video.currentTime = seg.end;
     arm(S.video.currentTime);
     renderWatching();
     const p = S.video.play();
@@ -272,6 +347,7 @@
     },
     toggleEnabled: () => {
       S.enabled = !S.enabled;
+      if (S.enabled) ensureAhead();
       if (S.mode === 'review' && !S.enabled) continueNext();
       else if (Panel.last) Panel.render(Object.assign({}, Panel.last, { enabled: S.enabled }));
       else renderWatching();
@@ -291,7 +367,9 @@
       S.video.removeEventListener('ended', onEnded);
     }
     S.video = null; S.cues = null; S.segments = null; S.armed = -1; S.current = -1;
-    S.mode = 'idle'; S.range = null; S.analyses = new Map(); S.collected = []; S.starred = []; S.times = null;
+    S.mode = 'idle'; S.range = null; S.analyses = new Map(); S.inflight = new Map();
+    S.collected = []; S.starred = []; S.times = null;
+    clearTimeout(aheadTimer);
     Panel.unmount();
   }
 
@@ -340,6 +418,7 @@
       video.addEventListener('ended', onEnded);
       arm(video.currentTime);
       S.mode = 'watching';
+      ensureAhead();          // 不等 1.2 秒，一載入就開始整理第一段
 
       Panel.render({
         kind: 'ready', total: S.segments.length, sourceLabel: S.sourceLabel, enabled: S.enabled, segment: null

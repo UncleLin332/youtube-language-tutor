@@ -142,3 +142,12 @@ html:not([dark]) .ly-panel {
 /* 文法重點列 */
 .ly-notes li { display: flex; gap: 8px; align-items: flex-start; }
 .ly-note-text { flex: 1; }
+
+/* 背景預先整理的狀態 */
+.ly-msg.ly-ok { color: #4caf79; }
+.ly-tick { font-weight: 700; }
+
+/* 筆記還沒到時先顯示的字幕原文 */
+.ly-raw { color: var(--ly-dim); font-size: 13px; }
+.ly-raw-line { padding: 3px 0; border-bottom: 1px solid var(--ly-line); }
+.ly-raw-line:last-child { border-bottom: 0; }
