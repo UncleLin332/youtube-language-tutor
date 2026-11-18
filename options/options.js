@@ -3,7 +3,7 @@ const DEFAULTS = {
   anthropicKey: '', anthropicModel: 'claude-opus-5-5',
   geminiKey: '', geminiModel: 'gemini-3.5-flash-lite',
   segmentSeconds: 30, targetLang: 'fr', nativeLang: '繁體中文',
-  autoPause: true, autoStart: false
+  autoPause: true, autoStart: false, exportFormat: 'fields'
 };
 const LANGS = {
   fr: '法文 (fr)', en: '英文 (en)', ja: '日文 (ja)', ko: '韓文 (ko)', es: '西班牙文 (es)',
@@ -36,6 +36,7 @@ async function load() {
   $('nativeLang').value = s.nativeLang;
   $('autoPause').checked = s.autoPause !== false;
   $('autoStart').checked = s.autoStart === true;
+  $('exportFormat').value = s.exportFormat || 'fields';
   const book = got.wordbook || [];
   $('bookCount').textContent = book.length ? `已收藏 ${book.length} 個字詞。` : '還沒有收藏任何字詞（在面板上點 ★ 即可加入）。';
 }
@@ -58,7 +59,8 @@ function current() {
     targetLang: $('targetLang').value,
     nativeLang: $('nativeLang').value.trim() || '繁體中文',
     autoPause: $('autoPause').checked,
-    autoStart: $('autoStart').checked
+    autoStart: $('autoStart').checked,
+    exportFormat: $('exportFormat').value
   };
 }
 
@@ -91,7 +93,7 @@ $('exportBook').addEventListener('click', async () => {
   const got = await chrome.storage.local.get('wordbook');
   const book = got.wordbook || [];
   if (!book.length) return say($('status2'), '生字本是空的。', 'err');
-  LYAnki.download(LYAnki.toCsv(book, { tag: 'YouTube' }), 'wordbook.csv');
+  LYAnki.download(LYAnki.toCsv(book, { tag: 'YouTube', format: current().exportFormat }), 'wordbook.csv');
   say($('status2'), `已匯出 ${book.length} 張卡片。`, 'ok');
 });
 

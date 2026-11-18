@@ -319,7 +319,7 @@
       return;
     }
     LYAnki.download(
-      LYAnki.toCsv(items, { tag: 'YouTube' }),
+      LYAnki.toCsv(items, { tag: 'YouTube', format: S.settings.exportFormat }),
       `${LYAnki.safeName(S.title)}-${starred ? '收藏' : '全部'}.csv`
     );
   }
@@ -333,7 +333,8 @@
   }
 
   async function toggleStar(v, on) {
-    const seg = S.segments[S.current];
+    // 星號是掛在 DOM 上的事件，有可能在狀態被清掉之後才觸發
+    const seg = S.segments ? S.segments[S.current] : null;
     const got = S.analyses.get(S.current);
     const item = Object.assign(
       entry((got && got.data) || {}, seg ? seg.start : 0, v),

@@ -130,7 +130,44 @@ require(ROOT + 'content/app.js');
     console.log('   開頭沒有 BOM:', captured.text.charCodeAt(0) !== 0xFEFF ? '✅' : '❌ 有 BOM');
   }
 
+  console.log('\n--- 分欄格式的欄位檢查 ---');
+  captured = null;
+  handlers.exportCsv('starred');
+  await new Promise(r => setTimeout(r, 20));
+  {
+    const lines = captured.text.split('\r\n').filter(Boolean);
+    const parse = (line) => { const o=[];let c='',q=false;
+      for (let i=0;i<line.length;i++){const ch=line[i];
+        if(q){if(ch==='"'){if(line[i+1]==='"'){c+='"';i++;}else q=false;}else c+=ch;}
+        else{if(ch==='"')q=true;else if(ch===','){o.push(c);c='';}else c+=ch;}}
+      o.push(c); return o; };
+    const header = lines.filter(l => l.startsWith('#'));
+    const row = parse(lines[header.length]);
+    console.log('指示行     :', header.join(' | '));
+    console.log('欄位數     :', row.length, row.length === 9 ? '✅' : '❌ 應為 9');
+    console.log('法文       :', JSON.stringify(row[0]));
+    console.log('中文       :', JSON.stringify(row[1]));
+    console.log('詞性       :', JSON.stringify(row[5]));
+    console.log('Tags       :', JSON.stringify(row[8]));
+    console.log('標籤無冒號 :', row[8].includes(':') ? '❌' : '✅');
+  }
+
+  console.log('\n--- 切成簡單格式 ---');
+  store.settings = { ...store.settings, exportFormat: 'basic' };
+  captured = null;
+  // 重新 route 讓 app 讀到新設定
+  await handlers.stop();
+  await new Promise(r => setTimeout(r, 30));
+  console.log('（簡單格式直接驗 LYAnki）');
+  {
+    const csv = LYAnki.toCsv([{ type:'word', word:'x', meaning:'測試', video:'V' }], { format:'basic' });
+    const lines = csv.split('\r\n').filter(Boolean);
+    console.log('指示行     :', lines.slice(0,3).join(' | '));
+    console.log('是三欄     :', (lines[3].match(/","/g) || []).length === 2 ? '✅' : '❌');
+  }
+
   console.log('\n--- 取消收藏後再匯出 ---');
+  store.settings = { ...store.settings, exportFormat: 'fields' };
   await handlers.toggleStar(item, false);
   console.log('取消後 isStarred:', handlers.isStarred('word', 'bonjour'));
   console.log('生字本筆數      :', (store.wordbook || []).length);
