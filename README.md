@@ -44,14 +44,31 @@
 ## 開發用的測試
 
 ```bash
-node test/export-test.js        # 載入真正的 app.js，驗證收藏 → 匯出的完整流程
-python3 -m http.server 8731     # 然後開 test/panel-preview.html 看面板外觀
-                                # test/api-test.html 可以貼 key 打一次真實 API
+node test/run.js      # 語法、manifest、三支測試一次跑完，有問題就回傳非 0
 ```
 
-`export-test.js` 存在的理由：匯出流程壞過兩次，兩次讀程式碼都看不出來——
-面板的按鈕呼叫 `exportCsv('starred')`，但 `exportCsv` 沒接那個參數，
-呼叫端和被呼叫端各自都沒錯，參數就這樣掉在地上。只有真的跑起來才會發現。
+| 檔案 | 測什麼 | 項目 |
+|---|---|---|
+| `test/segment-test.js` | 切段與句子時間（純函式） | 25 |
+| `test/pause-test.js` | 暫停時機與寬限期（載入真正的 app.js） | 16 |
+| `test/export-test.js` | 收藏、取消、三種匯出格式（載入真正的 app.js） | 33 |
+
+`test/harness.js` 把 chrome、DOM 與面板換成 stub，讓真正的 content script
+可以在 node 裡跑，並提供假的 `<video>` 讓測試手動推進時間。
+
+**重點是載入真正的程式碼，不是複製一份來測。** 這個專案已經兩次因為
+「複製品測過了，但真正的程式碼沒接上」而出事——面板呼叫
+`exportCsv('starred')`，而 `exportCsv` 根本沒宣告那個參數，兩邊各自都沒錯，
+`node --check` 也一路綠燈。
+
+瀏覽器端的東西（面板外觀、YouTube 的 DOM、真實 API 呼叫）沒辦法用 node 測，
+那部分靠這兩個手動工具：
+
+```bash
+python3 -m http.server 8731
+# test/panel-preview.html  看面板各種狀態的外觀
+# test/api-test.html       貼上 key 打一次真實 API，看輸出品質
+```
 
 ## 關於 API 與費用
 
