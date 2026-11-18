@@ -117,17 +117,20 @@ require(ROOT + 'content/app.js');
     console.log('   內容:', rows[3]);
   }
 
-  console.log('\n--- 匯出全部（走 S.collected，來源是分析結果）---');
+  console.log('\n--- 匯出全部表格（走 S.collected，來源是分析結果）---');
   captured = null;
-  handlers.exportCsv('all');
+  handlers.exportCsv('all', 'excel');
   await new Promise(r => setTimeout(r, 20));
   if (captured && captured.alert) console.log('❌', captured.alert);
   else if (!captured) console.log('❌ 沒有產生檔案');
   else {
     const rows = captured.text.split('\r\n').filter(Boolean);
-    console.log('✅ 檔名:', captured.filename, '／資料列數:', rows.length - 3);
-    console.log('   Anki 指示行:', rows[0] === '#separator:Comma' ? '有' : '❌ 沒有');
-    console.log('   開頭沒有 BOM:', captured.text.charCodeAt(0) !== 0xFEFF ? '✅' : '❌ 有 BOM');
+    // 表格只有一行標題，不像 Anki 檔有三到五行 # 指示行
+    const data = rows.filter((r) => !r.startsWith('#')).length - 1;
+    console.log('✅ 檔名:', captured.filename, '／資料列數:', data, data > 0 ? '' : '❌ 應該要有資料');
+    console.log('   有 BOM（Excel 用）:', captured.text.charCodeAt(0) === 0xFEFF ? '✅' : '❌');
+    console.log('   沒有 Anki 指示行  :', rows[0].startsWith('#') ? '❌' : '✅');
+    console.log('   標題列            :', rows[0].replace(/\uFEFF/, '').slice(0, 60));
   }
 
   const parse = (line) => { const o=[];let c='',q=false;
