@@ -109,10 +109,48 @@
     return rows.join('\r\n') + '\r\n';
   };
 
-  // 預設走分欄；想用 Anki 內建 Basic 的話在設定頁選「簡單」
+  // 精簡 Anki 格式：正面法文、背面中文，兩欄。
+  // Anki 內建的 Basic 筆記類型剛好就是 Front/Back，所以不用建筆記類型、不用寫範本。
+  A.toSimpleAnkiCsv = (items, opts) => {
+    const o = opts || {};
+    const rows = ['#separator:Comma', '#html:true', '#columns:Front,Back,Tags', '#tags column:3'];
+    for (const it of items) {
+      const type = it.type || 'word';
+      rows.push([
+        htmlEsc(type === 'grammar' ? A.grammarFront(it.word) : it.word),
+        htmlEsc(type === 'grammar' ? (it.note || it.word) : it.meaning),
+        tagsOf(it, o)
+      ].map(csvEsc).join(','));
+    }
+    return rows.join('\r\n') + '\r\n';
+  };
+
+  // 給人看的表格：純文字、沒有 HTML、沒有 Anki 指示行。
+  // 開頭要加 BOM，否則 Excel 開啟時中文會變亂碼——這點和 Anki 剛好相反。
+  A.EXCEL_COLUMNS = ['類型', '法文', '中文', '例句', '例句翻譯', '筆記', '詞性', '原形', '影片', '連結'];
+
+  A.toExcelCsv = (items) => {
+    const rows = [A.EXCEL_COLUMNS.map(csvEsc).join(',')];
+    for (const it of items) {
+      const type = it.type || 'word';
+      rows.push([
+        A.TYPE_LABEL[type] || '單字',
+        it.word, it.meaning, it.example, it.exampleZh, it.note,
+        type === 'grammar' ? '' : it.pos,
+        it.lemma && it.lemma !== it.word ? it.lemma : '',
+        it.video, it.url
+      ].map(csvEsc).join(','));
+    }
+    return '\uFEFF' + rows.join('\r\n') + '\r\n';
+  };
+
+  // format: 'excel' 給人看、'fields' 分欄給 Anki、其餘走精簡 Anki
   A.toCsv = (items, opts) => {
     const o = opts || {};
-    return o.format === 'basic' ? A.toBasicCsv(items, o) : A.toFieldsCsv(items, o);
+    if (o.format === 'excel') return A.toExcelCsv(items, o);
+    if (o.format === 'fields') return A.toFieldsCsv(items, o);
+    if (o.format === 'basic') return A.toBasicCsv(items, o);
+    return A.toSimpleAnkiCsv(items, o);
   };
 
   A.download = (text, filename) => {

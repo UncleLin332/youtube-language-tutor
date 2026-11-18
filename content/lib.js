@@ -13,7 +13,7 @@
     nativeLang: '繁體中文',
     autoPause: true,
     autoStart: false,    // 預設每支影片都要自己按「開始學習」
-    exportFormat: 'fields'   // 'fields' = 每個資料各一欄；'basic' = Anki 內建 Basic
+    exportFormat: 'simple'   // Anki 檔的格式：'simple' = 法文/中文兩欄；'fields' = 九個欄位
   };
 
   // 把設定收斂成背景程序要的那幾個欄位

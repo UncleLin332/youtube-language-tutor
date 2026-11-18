@@ -120,21 +120,26 @@
     ]);
   }
 
-  // 隨時可以匯出目前收藏的，不必等整部影片看完（常常是分好幾次看的）
-  function exportStarredBtn() {
-    const b = el('button', { class: 'ly-btn ly-export-starred' });
+  // 隨時可以匯出目前收藏的，不必等整部影片看完（常常是分好幾次看的）。
+  // 兩顆按鈕是兩種用途：表格給人看（Excel），Anki 檔給機器吃。
+  function exportRow(scope) {
+    const label = el('span', { class: 'ly-export-label' });
+    const excel = el('button', { class: 'ly-mini', text: '📊 表格', title: '詳細欄位，用 Excel 或 Numbers 開' });
+    const anki = el('button', { class: 'ly-mini', text: '★ Anki', title: '法文＋中文兩欄，用 Anki 內建的 Basic 直接匯入' });
+
     P.syncExportBtn = () => {
       const n = P.on.starredCount ? P.on.starredCount() : 0;
-      b.textContent = n ? `★ 匯出收藏 (${n})` : '★ 尚未收藏';
-      b.title = n ? '把目前收藏的項目匯出成 Anki CSV' : '點單字或句子旁邊的 ★ 就能收藏';
-      b.classList.toggle('ly-disabled', !n);
+      label.textContent = n ? `收藏了 ${n} 個` : '還沒有收藏';
+      for (const b of [excel, anki]) b.classList.toggle('ly-disabled', !n);
     };
-    b.addEventListener('click', () => {
+    const go = (format) => () => {
       if (P.on.starredCount && !P.on.starredCount()) return;
-      P.on.exportCsv && P.on.exportCsv('starred');
-    });
+      P.on.exportCsv && P.on.exportCsv(scope, format);
+    };
+    excel.addEventListener('click', go('excel'));
+    anki.addEventListener('click', go('anki'));
     P.syncExportBtn();
-    return b;
+    return el('div', { class: 'ly-export' }, [label, el('span', { class: 'ly-spacer' }), excel, anki]);
   }
 
   // 收藏鈕。狀態一律跟 app 查，不要只記在 DOM 的 class 上——
@@ -315,17 +320,22 @@
       P.foot.classList.add('ly-foot-wrap');
       P.foot.appendChild(el('button', {
         class: 'ly-btn ly-wide ly-primary' + (st.starred ? '' : ' ly-disabled'),
-        text: st.starred ? `匯出收藏的 ${st.starred} 個 → Anki` : '還沒有收藏任何項目',
-        title: '匯出成 Anki 可以直接匯入的 CSV',
-        onclick: () => st.starred && P.on.exportCsv && P.on.exportCsv('starred')
+        text: st.starred ? `★ 匯出收藏的 ${st.starred} 個 → Anki` : '還沒有收藏任何項目',
+        title: '法文＋中文兩欄，用 Anki 內建的 Basic 直接匯入',
+        onclick: () => st.starred && P.on.exportCsv && P.on.exportCsv('starred', 'anki')
+      }));
+      P.foot.appendChild(el('button', {
+        class: 'ly-btn' + (st.starred ? '' : ' ly-disabled'), text: '📊 收藏表格',
+        title: '收藏項目的詳細欄位，用 Excel 開',
+        onclick: () => st.starred && P.on.exportCsv && P.on.exportCsv('starred', 'excel')
+      }));
+      P.foot.appendChild(el('button', {
+        class: 'ly-btn', text: '📊 全部表格',
+        title: '這部影片整理過的所有單字與片語',
+        onclick: () => P.on.exportCsv && P.on.exportCsv('all', 'excel')
       }));
       P.foot.appendChild(el('button', { class: 'ly-btn', text: '從頭再看',
         onclick: () => P.on.restart && P.on.restart() }));
-      P.foot.appendChild(el('button', {
-        class: 'ly-btn', text: '匯出全部',
-        title: '這部影片整理過的所有單字與片語',
-        onclick: () => P.on.exportCsv && P.on.exportCsv('all')
-      }));
     } else if (vm.kind === 'result') {
       P.body.appendChild(toggles());
       const d = vm.data;
@@ -341,8 +351,8 @@
       }
       if (vm.cached) P.body.appendChild(el('div', { class: 'ly-foot-note', text: '（這段用的是之前的分析結果，沒有重新呼叫 API）' }));
 
+      P.body.appendChild(exportRow('starred'));
       P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽整段', onclick: () => P.on.replaySegment && P.on.replaySegment() }));
-      P.foot.appendChild(exportStarredBtn());
       P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '繼續播放 ▶', onclick: () => P.on.continue && P.on.continue() }));
     }
   };

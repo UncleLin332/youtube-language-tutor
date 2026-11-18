@@ -106,14 +106,14 @@
   </div>
 
   <div class="row">
-    <label for="exportFormat">Anki 匯出格式</label>
+    <label for="exportFormat">Anki 檔的格式</label>
     <select id="exportFormat">
-      <option value="fields">分欄（法文／中文／例句／例句翻譯／筆記…）</option>
-      <option value="basic">簡單（Front／Back，用 Anki 內建的 Basic）</option>
+      <option value="simple">精簡：法文＋中文兩欄（不用設定，直接匯入）</option>
+      <option value="fields">分欄：例句、筆記、詞性各自一欄（要先建筆記類型）</option>
     </select>
-    <div class="hint">分欄可以在 Anki 自己排版卡片，但要先建一個叫
-      <code>YouTube 語言學習</code> 的筆記類型（欄位名稱見 README）。
-      不想設定就選「簡單」。</div>
+    <div class="hint">精簡版用 Anki 內建的 Basic 就能匯入。分欄版可以在 Anki 自己排版卡片，
+      但要先建一個叫 <code>YouTube 語言學習</code> 的筆記類型（步驟見 README）。<br>
+      「📊 表格」按鈕不受這裡影響，一律匯出給人看的詳細表格。</div>
   </div>
 
   <div class="row">

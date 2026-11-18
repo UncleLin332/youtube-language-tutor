@@ -308,8 +308,9 @@
   }
 
   // ---------- 匯出 ----------
-  // scope: 'starred' = 你打過星號的（含句子與文法）；其餘 = 這部影片整理過的單字與片語
-  function exportCsv(scope) {
+  // scope : 'starred' = 你打過星號的；其餘 = 這部影片整理過的全部
+  // format: 'excel' = 詳細表格給人看；其餘 = Anki 匯入檔
+  function exportCsv(scope, format) {
     const starred = scope === 'starred';
     const items = starred ? S.starred : S.collected;
     if (!items.length) {
@@ -318,9 +319,13 @@
         : '這部影片還沒有整理到單字。');
       return;
     }
+    const excel = format === 'excel';
     LYAnki.download(
-      LYAnki.toCsv(items, { tag: 'YouTube', format: S.settings.exportFormat }),
-      `${LYAnki.safeName(S.title)}-${starred ? '收藏' : '全部'}.csv`
+      LYAnki.toCsv(items, {
+        tag: 'YouTube',
+        format: excel ? 'excel' : (S.settings.exportFormat || 'simple')
+      }),
+      `${LYAnki.safeName(S.title)}-${starred ? '收藏' : '全部'}-${excel ? '表格' : 'Anki'}.csv`
     );
   }
 

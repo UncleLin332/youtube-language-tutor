@@ -3,7 +3,7 @@ const DEFAULTS = {
   anthropicKey: '', anthropicModel: 'claude-opus-5-5',
   geminiKey: '', geminiModel: 'gemini-3.5-flash-lite',
   segmentSeconds: 30, targetLang: 'fr', nativeLang: '繁體中文',
-  autoPause: true, autoStart: false, exportFormat: 'fields'
+  autoPause: true, autoStart: false, exportFormat: 'simple'
 };
 const LANGS = {
   fr: '法文 (fr)', en: '英文 (en)', ja: '日文 (ja)', ko: '韓文 (ko)', es: '西班牙文 (es)',
@@ -36,7 +36,7 @@ async function load() {
   $('nativeLang').value = s.nativeLang;
   $('autoPause').checked = s.autoPause !== false;
   $('autoStart').checked = s.autoStart === true;
-  $('exportFormat').value = s.exportFormat || 'fields';
+  $('exportFormat').value = s.exportFormat || 'simple';
   const book = got.wordbook || [];
   $('bookCount').textContent = book.length ? `已收藏 ${book.length} 個字詞。` : '還沒有收藏任何字詞（在面板上點 ★ 即可加入）。';
 }

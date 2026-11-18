@@ -161,3 +161,12 @@ html:not([dark]) .ly-panel {
 .ly-sent-star { flex: none; opacity: .35; align-self: flex-start; }
 .ly-sent:hover .ly-sent-star { opacity: .8; }
 .ly-sent-star.saved { opacity: 1; }
+
+/* 匯出列 */
+.ly-export {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ly-line);
+}
+.ly-export-label { color: var(--ly-dim); font-size: 12px; }
+.ly-mini.ly-disabled { opacity: .4; cursor: default; }
+.ly-mini.ly-disabled:hover { color: var(--ly-dim); border-color: var(--ly-line); }

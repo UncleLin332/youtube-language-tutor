@@ -130,44 +130,59 @@ require(ROOT + 'content/app.js');
     console.log('   開頭沒有 BOM:', captured.text.charCodeAt(0) !== 0xFEFF ? '✅' : '❌ 有 BOM');
   }
 
-  console.log('\n--- 分欄格式的欄位檢查 ---');
-  captured = null;
-  handlers.exportCsv('starred');
-  await new Promise(r => setTimeout(r, 20));
-  {
-    const lines = captured.text.split('\r\n').filter(Boolean);
-    const parse = (line) => { const o=[];let c='',q=false;
-      for (let i=0;i<line.length;i++){const ch=line[i];
-        if(q){if(ch==='"'){if(line[i+1]==='"'){c+='"';i++;}else q=false;}else c+=ch;}
-        else{if(ch==='"')q=true;else if(ch===','){o.push(c);c='';}else c+=ch;}}
-      o.push(c); return o; };
-    const header = lines.filter(l => l.startsWith('#'));
-    const row = parse(lines[header.length]);
-    console.log('指示行     :', header.join(' | '));
-    console.log('欄位數     :', row.length, row.length === 9 ? '✅' : '❌ 應為 9');
-    console.log('法文       :', JSON.stringify(row[0]));
-    console.log('中文       :', JSON.stringify(row[1]));
-    console.log('詞性       :', JSON.stringify(row[5]));
-    console.log('Tags       :', JSON.stringify(row[8]));
-    console.log('標籤無冒號 :', row[8].includes(':') ? '❌' : '✅');
+  const parse = (line) => { const o=[];let c='',q=false;
+    for (let i=0;i<line.length;i++){const ch=line[i];
+      if(q){if(ch==='"'){if(line[i+1]==='"'){c+='"';i++;}else q=false;}else c+=ch;}
+      else{if(ch==='"')q=true;else if(ch===','){o.push(c);c='';}else c+=ch;}}
+    o.push(c); return o; };
+
+  async function grab(scope, format) {
+    captured = null;
+    handlers.exportCsv(scope, format);
+    await new Promise(r => setTimeout(r, 20));
+    return captured;
   }
 
-  console.log('\n--- 切成簡單格式 ---');
-  store.settings = { ...store.settings, exportFormat: 'basic' };
-  captured = null;
-  // 重新 route 讓 app 讀到新設定
-  await handlers.stop();
-  await new Promise(r => setTimeout(r, 30));
-  console.log('（簡單格式直接驗 LYAnki）');
+  console.log('\n--- Anki 檔（預設・精簡兩欄）---');
   {
-    const csv = LYAnki.toCsv([{ type:'word', word:'x', meaning:'測試', video:'V' }], { format:'basic' });
+    const c = await grab('starred', 'anki');
+    const lines = c.text.split('\r\n').filter(Boolean);
+    const head = lines.filter(l => l.startsWith('#'));
+    const row = parse(lines[head.length]);
+    console.log('檔名      :', c.filename);
+    console.log('指示行    :', head.join(' | '));
+    console.log('欄位數    :', row.length, row.length === 3 ? '✅' : '❌ 應為 3');
+    console.log('正面/背面 :', JSON.stringify(row[0]), '/', JSON.stringify(row[1]));
+    console.log('無 BOM    :', c.text.charCodeAt(0) !== 0xFEFF ? '✅' : '❌ Anki 會讀不到 #separator');
+  }
+
+  console.log('\n--- 表格（給人看）---');
+  {
+    const c = await grab('starred', 'excel');
+    const body = c.text.charCodeAt(0) === 0xFEFF ? c.text.slice(1) : c.text;
+    const lines = body.split('\r\n').filter(Boolean);
+    const header = parse(lines[0]);
+    const row = parse(lines[1]);
+    console.log('檔名      :', c.filename);
+    console.log('有 BOM    :', c.text.charCodeAt(0) === 0xFEFF ? '✅ Excel 中文才不會亂碼' : '❌');
+    console.log('沒有指示行:', lines[0].startsWith('#') ? '❌' : '✅');
+    console.log('欄位      :', header.join(' / '));
+    console.log('第一列    :', row.slice(0, 3).join(' / '), '…');
+    console.log('連結是純網址:', /^https?:\/\//.test(row[9]) ? '✅' : '❌ ' + row[9]);
+    console.log('沒有 HTML :', body.includes('<') ? '❌ 還有標籤' : '✅');
+  }
+
+  console.log('\n--- 分欄 Anki（設定頁可選）---');
+  {
+    const csv = LYAnki.toCsv([{ type:'word', word:'x', meaning:'測試', example:'ex', exampleZh:'例',
+                                note:'n', pos:'v.', lemma:'y', video:'V', url:'https://a' }], { format:'fields' });
     const lines = csv.split('\r\n').filter(Boolean);
-    console.log('指示行     :', lines.slice(0,3).join(' | '));
-    console.log('是三欄     :', (lines[3].match(/","/g) || []).length === 2 ? '✅' : '❌');
+    const head = lines.filter(l => l.startsWith('#'));
+    console.log('欄位數    :', parse(lines[head.length]).length, '（應為 9）');
+    console.log('notetype  :', head.find(l => l.startsWith('#notetype')));
   }
 
   console.log('\n--- 取消收藏後再匯出 ---');
-  store.settings = { ...store.settings, exportFormat: 'fields' };
   await handlers.toggleStar(item, false);
   console.log('取消後 isStarred:', handlers.isStarred('word', 'bonjour'));
   console.log('生字本筆數      :', (store.wordbook || []).length);
