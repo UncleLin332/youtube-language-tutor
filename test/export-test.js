@@ -110,10 +110,57 @@ const WORD = { type: 'word', word: 'bonjour', lemma: 'bonjour', pos: 'interj.', 
   }
 
   // ---------------------------------------------------------------
+  t.section('框選一小段：解說');
+  {
+    const info = { text: "c'est-à-dire qu'il fait très chaud",
+                   sentence: "C'est-à-dire qu'il fait très chaud, il fait 40°.",
+                   sentenceZh: '也就是說天氣非常熱，有 40 度。', li: null };
+    app.calls.length = 0;
+    app.explains.length = 0;
+    await app.handlers.explainFragment(info);
+    await app.settle();
+
+    const sent = app.calls.filter((c) => c.type === 'explain');
+    t.eq(sent.length, 1, '送出一次解說請求');
+    t.eq(sent[0].fragment, info.text, '帶的是框選的片段');
+    t.eq(sent[0].sentence, info.sentence, '也帶了整句當語境');
+    t.ok(app.explains.some((e) => e.state.loading), '先顯示解說中');
+    const done = app.explains[app.explains.length - 1];
+    t.eq(done.state.data.meaning, t.DEMO_EXPLAIN.meaning, '最後顯示解說結果');
+
+    app.calls.length = 0;
+    await app.handlers.explainFragment(info);
+    await app.settle();
+    t.eq(app.calls.filter((c) => c.type === 'explain').length, 0, '同一段再問一次不會重複呼叫 API');
+  }
+
+  t.section('框選一小段：收藏');
+  {
+    const info = { text: "l'air est étouffant",
+                   sentence: "Donc c'est étouffant vraiment, l'air est étouffant.",
+                   sentenceZh: '所以真的很悶熱，空氣令人窒息。', li: null };
+    await app.handlers.starFragment(info);
+    await app.settle();
+
+    t.eq(app.handlers.isStarred('fragment', info.text), true, '片段被收藏了');
+    const saved = (app.store.wordbook || []).find((b) => b.word === info.text);
+    t.ok(!!saved, '寫進生字本');
+    t.eq(saved.meaning, t.DEMO_EXPLAIN.meaning, '背面用的是解說給的意思，不是空的');
+    t.eq(saved.type, 'fragment', '類型標成片段');
+
+    const f = await grab('starred', 'excel');
+    const rows = f.text.slice(1).split('\r\n').filter(Boolean);
+    t.ok(rows.some((r) => r.includes('片段')), '匯出的表格裡有「片段」類型');
+  }
+
   t.section('取消收藏之後');
+  // 前面幾段留下的收藏都清掉，才驗得到「完全沒有收藏」的行為
+  for (const item of [WORD, { type: 'fragment', word: "l'air est étouffant" }]) {
+    await app.handlers.toggleStar(item, false);
+  }
+  t.eq(app.handlers.starredCount(), 0, '全部取消後計數歸零');
   await app.handlers.toggleStar(WORD, false);
   t.eq(app.handlers.isStarred('word', 'bonjour'), false, '查不到了');
-  t.eq(app.handlers.starredCount(), 0, '計數歸零');
   t.eq((app.store.wordbook || []).length, 0, '也從生字本移除');
   {
     await grab('starred', 'anki');

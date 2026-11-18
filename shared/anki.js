@@ -25,7 +25,7 @@
     return t.replace(/_$/, '');
   };
 
-  A.TYPE_LABEL = { word: '單字', phrase: '片語', grammar: '文法', sentence: '句子' };
+  A.TYPE_LABEL = { word: '單字', phrase: '片語', grammar: '文法', sentence: '句子', fragment: '片段' };
 
   // 文法重點是一段敘述，不適合整段當正面；拆成「主題 → 說明」
   A.grammarFront = (text) => {

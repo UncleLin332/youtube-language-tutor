@@ -37,6 +37,12 @@ const DEFAULT_SETTINGS = {
   autoPause: true, autoStart: false, exportFormat: 'simple'
 };
 
+const DEMO_EXPLAIN = {
+  meaning: '也就是說天氣非常熱',
+  note: 'c\'est-à-dire 用來改口說得更清楚',
+  breakdown: [{ part: "c'est-à-dire", meaning: '也就是說' }, { part: 'qu\'il fait très chaud', meaning: '天氣非常熱' }]
+};
+
 const DEMO_ANALYSIS = {
   sentences: [{ text: 'Bonjour les amis.', translation: '大家好。', start_line: 0, end_line: 0 }],
   vocab: [{ word: 'ligne', lemma: 'ligne', pos: 'n.f.', meaning: '行、線', note: '' }],
@@ -49,6 +55,7 @@ async function createApp(opts) {
   const store = { settings: Object.assign({}, DEFAULT_SETTINGS, o.settings) };
   const downloads = [];
   const renders = [];
+  const calls = [];        // 送去背景程序的請求
   const alerts = [];
   const listeners = {};
 
@@ -91,7 +98,14 @@ async function createApp(opts) {
     },
     runtime: {
       sendMessage: async (msg) => {
-        if (!msg || msg.type !== 'analyze') return {};
+        if (!msg) return {};
+        if (msg.type === 'explain') {
+          calls.push(msg);
+          if (o.explain) return o.explain(msg);
+          return { cached: false, data: JSON.parse(JSON.stringify(DEMO_EXPLAIN)) };
+        }
+        if (msg.type !== 'analyze') return {};
+        calls.push(msg);
         if (o.analyze) return o.analyze(msg);
         return { cached: false, data: JSON.parse(JSON.stringify(DEMO_ANALYSIS)) };
       },
@@ -113,9 +127,12 @@ async function createApp(opts) {
   LY.Panel = {
     mount: (h) => { handlers = h; return {}; },
     unmount() {}, reflow() {}, last: null,
-    render: (vm) => { renders.push(vm); LY.Panel.last = vm; }
+    render: (vm) => { renders.push(vm); LY.Panel.last = vm; },
+    showExplain: (info, state) => { explains.push({ info, state }); },
+    syncExportBtn: null
   };
 
+  const explains = [];
   const lineCount = o.lines || 20;
   const lineSeconds = o.lineSeconds || 7;
   LY.loadCues = async () => ({
@@ -142,10 +159,10 @@ async function createApp(opts) {
 
   return {
     get handlers() { return handlers; },
-    video, store, renders, downloads, alerts, fire, tick,
+    video, store, renders, downloads, alerts, calls, explains, fire, tick,
     lastRender: () => renders[renders.length - 1],
     settle: (ms) => new Promise((r) => setTimeout(r, ms == null ? 30 : ms))
   };
 }
 
-module.exports = { ok, eq, near, section, finish, createApp, ROOT, DEMO_ANALYSIS };
+module.exports = { ok, eq, near, section, finish, createApp, ROOT, DEMO_ANALYSIS, DEMO_EXPLAIN };

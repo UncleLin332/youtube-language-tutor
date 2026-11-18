@@ -29,6 +29,16 @@ const handlers = {
   restart:()=>{}, exportCsv:()=>{}, continue:()=>{},
   replaySegment:()=>{}, playSentence:()=>{}, toggleEnabled:()=>{}, openOptions:()=>{},
   isStarred: (t, w) => starred.has(skey(t, w)),
+  explainFragment: (info) => {
+    window.__lastInfo = info;
+    P.showExplain(info, { loading: true });
+    setTimeout(() => P.showExplain(info, { data: {
+      meaning: '（模擬）也就是說天氣非常熱',
+      note: "c'est-à-dire 用來改口說得更清楚",
+      breakdown: [{ part: "c'est-à-dire", meaning: '也就是說' }, { part: 'très chaud', meaning: '非常熱' }]
+    } }), 150);
+  },
+  starFragment: (info) => { window.__lastInfo = info; starred.add(skey('fragment', info.text)); },
   starredCount: () => starred.size,
   toggleStar: (item, on) => { on ? starred.add(skey(item.type, item.word)) : starred.delete(skey(item.type, item.word)); }
 };

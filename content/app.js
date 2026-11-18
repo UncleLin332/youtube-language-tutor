@@ -329,6 +329,50 @@
     );
   }
 
+  // ---------- 框選一小段：解說與收藏 ----------
+  const explains = new Map();   // 片段 -> 解說結果
+
+  async function requestExplain(info) {
+    const key = info.text + '\u0000' + info.sentence;
+    if (explains.has(key)) return explains.get(key);
+    const res = await chrome.runtime.sendMessage({
+      type: 'explain',
+      settings: LY.resolve(S.settings),
+      fragment: info.text,
+      sentence: info.sentence,
+      sentenceZh: info.sentenceZh
+    });
+    if (!res) throw new Error('背景程序沒有回應，請重新整理頁面。');
+    if (res.error) throw new Error(res.error);
+    explains.set(key, res.data);
+    return res.data;
+  }
+
+  async function explainFragment(info) {
+    Panel.showExplain(info, { loading: true });
+    try {
+      Panel.showExplain(info, { data: await requestExplain(info) });
+    } catch (e) {
+      Panel.showExplain(info, { error: String((e && e.message) || e) });
+    }
+  }
+
+  async function starFragment(info) {
+    // 先問出意思再存，否則卡片背面會是空的
+    Panel.showExplain(info, { loading: true });
+    try {
+      const data = await requestExplain(info);
+      Panel.showExplain(info, { data });
+      await toggleStar({
+        type: 'fragment', word: info.text, meaning: data.meaning || '',
+        lemma: '', pos: '', note: data.note || ''
+      }, true);
+      if (Panel.syncExportBtn) Panel.syncExportBtn();
+    } catch (e) {
+      Panel.showExplain(info, { error: String((e && e.message) || e) });
+    }
+  }
+
   // 同一個字可能在不同影片都收藏過，所以用「類型＋內容」當鍵，取消時再加上影片範圍
   function starKey(type, word) { return (type || 'word') + '\u0000' + String(word || ''); }
 
@@ -387,6 +431,8 @@
     restart,
     isStarred,
     toggleStar,
+    explainFragment,
+    starFragment,
     starredCount: () => S.starred.length
   };
 
@@ -403,6 +449,7 @@
     if (S.active) setBadge(false);
     S.active = false; S.routed = false; S.waitingFor = -1;
     S.collected = []; S.starred = []; S.times = null;
+    explains.clear();
     S.token = Symbol('detached');   // 作廢還在路上的預抓，回來時不會再寫進狀態
     clearTimeout(aheadTimer);
     Panel.unmount();

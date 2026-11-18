@@ -87,19 +87,20 @@ const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2026-10-21';
 const ANTHROPIC_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
-async function callAnthropic(settings, lines) {
-  const system = instructions(settings.langName, settings.nativeLang);
+async function callAnthropic(settings, job) {
+  const system = job.system;
+  const schema = job.schema;
 
   function body(opt) {
     const b = {
       model: settings.model,
       max_tokens: 8000,
       system: opt.structured ? system
-        : system + '\n\n只輸出一個 JSON 物件，不要有任何其他文字或程式碼框。結構：\n' + JSON.stringify(SCHEMA),
-      messages: [{ role: 'user', content: transcriptBlock(lines) }],
+        : system + '\n\n只輸出一個 JSON 物件，不要有任何其他文字或程式碼框。結構：\n' + JSON.stringify(schema),
+      messages: [{ role: 'user', content: job.user }],
       output_config: { effort: 'low' }
     };
-    if (opt.structured) b.output_config.format = { type: 'json_schema', schema: SCHEMA };
+    if (opt.structured) b.output_config.format = { type: 'json_schema', schema };
     if (opt.fallback) b.fallbacks = 'default';
     return b;
   }
@@ -139,17 +140,18 @@ async function callAnthropic(settings, lines) {
 // 2026/05 之後 Gemini 改用 Interactions API，舊的 generateContent 已列為 legacy。
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 
-async function callGemini(settings, lines) {
-  const prompt = instructions(settings.langName, settings.nativeLang) + '\n\n' + transcriptBlock(lines);
+async function callGemini(settings, job) {
+  const prompt = job.system + '\n\n' + job.user;
+  const schema = job.schema;
 
   function body(opt) {
     const b = {
       model: settings.model,
       input: opt.structured ? prompt
-        : prompt + '\n\n只輸出一個 JSON 物件，不要有任何其他文字或程式碼框。結構：\n' + JSON.stringify(SCHEMA)
+        : prompt + '\n\n只輸出一個 JSON 物件，不要有任何其他文字或程式碼框。結構：\n' + JSON.stringify(schema)
     };
     if (opt.structured) {
-      b.response_format = { type: 'text', mime_type: 'application/json', schema: SCHEMA };
+      b.response_format = { type: 'text', mime_type: 'application/json', schema };
     }
     return b;
   }
@@ -256,7 +258,7 @@ function parseJson(text) {
 
 const MAX_ATTEMPTS = 3;
 
-async function callModel(settings, lines, onProgress) {
+async function callModel(settings, job, onProgress) {
   const p = PROVIDERS[settings.provider] || PROVIDERS.anthropic;
   const notify = typeof onProgress === 'function' ? onProgress : () => {};
   let last = null;
@@ -264,12 +266,8 @@ async function callModel(settings, lines, onProgress) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       notify({ phase: 'request', attempt, max: MAX_ATTEMPTS });
-      const parsed = parseJson(await p.call(settings, lines));
-      parsed.sentences = parsed.sentences || [];
-      parsed.vocab = parsed.vocab || [];
-      parsed.phrases = parsed.phrases || [];
-      parsed.notes = parsed.notes || [];
-      return parsed;
+      const parsed = parseJson(await p.call(settings, job));
+      return job.normalize ? job.normalize(parsed) : parsed;
     } catch (e) {
       last = e;
       if (!e || !e.retryable || attempt === MAX_ATTEMPTS) break;
@@ -286,4 +284,76 @@ async function callModel(settings, lines, onProgress) {
   throw last;
 }
 
-export { SCHEMA, callModel, apiError, PROVIDERS };
+
+// ---------- 任務：整理一個段落 ----------
+function analyzeJob(settings, lines) {
+  return {
+    system: instructions(settings.langName, settings.nativeLang),
+    user: transcriptBlock(lines),
+    schema: SCHEMA,
+    normalize: (p) => {
+      p.sentences = p.sentences || [];
+      p.vocab = p.vocab || [];
+      p.phrases = p.phrases || [];
+      p.notes = p.notes || [];
+      return p;
+    }
+  };
+}
+
+// ---------- 任務：解說句子裡被框選的一小段 ----------
+const EXPLAIN_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['meaning', 'note', 'breakdown'],
+  properties: {
+    meaning: { type: 'string', description: '這一小段在這個句子裡的中文意思' },
+    note: { type: 'string', description: '為什麼這樣說：文法結構、語氣或固定用法；沒有特別的就空字串' },
+    breakdown: {
+      type: 'array',
+      description: '把這一小段拆成幾塊各自解釋，最多 6 塊；只有一兩個字時給空陣列',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['part', 'meaning'],
+        properties: {
+          part: { type: 'string', description: '原文的一小塊' },
+          meaning: { type: 'string', description: '這一塊的中文' }
+        }
+      }
+    }
+  }
+};
+
+function explainJob(settings, p) {
+  const lang = settings.langName || '目標語言';
+  const native = settings.nativeLang || '繁體中文';
+  return {
+    system: [
+      `你是一位${lang}老師，學生的母語是${native}。`,
+      '學生在一個句子裡框選了一小段，想知道這一段的意思和用法。',
+      '',
+      '規則：',
+      '1. 只解釋被框選的那一段，不要解釋整句。整句只是用來判斷語境。',
+      `2. meaning：這一段在這個句子裡的${native}意思，要通順，不要逐字硬翻。`,
+      '3. breakdown：把它拆成幾塊各自解釋，讓學生看出結構；只有一兩個字就給空陣列。',
+      '4. note：這樣說的原因——文法結構、語氣、固定用法、或容易誤解的地方。沒有就空字串。',
+      `5. 全部用${native}解釋，精簡，不要客套話。`
+    ].join('\n'),
+    user: [
+      '整句：' + p.sentence,
+      p.sentenceZh ? '整句中文：' + p.sentenceZh : '',
+      '',
+      '框選的部分：' + p.fragment
+    ].filter(Boolean).join('\n'),
+    schema: EXPLAIN_SCHEMA,
+    normalize: (r) => {
+      r.meaning = r.meaning || '';
+      r.note = r.note || '';
+      r.breakdown = r.breakdown || [];
+      return r;
+    }
+  };
+}
+
+export { SCHEMA, EXPLAIN_SCHEMA, callModel, analyzeJob, explainJob, apiError, PROVIDERS };

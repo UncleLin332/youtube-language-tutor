@@ -1,7 +1,7 @@
 // 背景 service worker：呼叫 LLM（content script 受 CORS 限制，不能直接打）＋ 結果快取
 //
 // 供應商的請求／解析邏輯在 providers.js，和 test/api-test.html 共用。
-import { callModel } from './providers.js';
+import { callModel, analyzeJob, explainJob } from './providers.js';
 
 const CACHE_VERSION = 'v2';
 
@@ -17,7 +17,28 @@ async function analyze(req) {
   if (hit[key]) return { data: hit[key], cached: true };
 
   if (!req.settings.apiKey) throw new Error('還沒設定 API key。點一下工具列的擴充圖示開啟設定頁。');
-  const data = await callModel(req.settings, req.segment.lines);
+  const data = await callModel(req.settings, analyzeJob(req.settings, req.segment.lines));
+  try {
+    await chrome.storage.local.set({ [key]: data });
+  } catch (e) {
+    console.warn('[語言助手] 快取寫入失敗', e);
+  }
+  return { data, cached: false };
+}
+
+function explainKey(req) {
+  const s = req.settings;
+  return [CACHE_VERSION, 'ex', s.provider, s.model, s.nativeLang,
+    (req.fragment || '').slice(0, 120), (req.sentence || '').slice(0, 120)].join(':');
+}
+
+async function explain(req) {
+  const key = explainKey(req);
+  const hit = await chrome.storage.local.get(key);
+  if (hit[key]) return { data: hit[key], cached: true };
+
+  if (!req.settings.apiKey) throw new Error('還沒設定 API key。點一下工具列的擴充圖示開啟設定頁。');
+  const data = await callModel(req.settings, explainJob(req.settings, req));
   try {
     await chrome.storage.local.set({ [key]: data });
   } catch (e) {
@@ -37,8 +58,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === 'explain') {
+    explain(msg).then(
+      (r) => sendResponse(r),
+      (e) => sendResponse({ error: String((e && e.message) || e) })
+    );
+    return true;
+  }
+
   if (msg.type === 'testKey') {
-    callModel(msg.settings, [{ i: 0, text: 'Bonjour, ça va bien aujourd\'hui.' }]).then(
+    callModel(msg.settings, analyzeJob(msg.settings, [{ i: 0, text: 'Bonjour, ça va bien aujourd\'hui.' }])).then(
       () => sendResponse({ ok: true }),
       (e) => sendResponse({ ok: false, error: String((e && e.message) || e) })
     );

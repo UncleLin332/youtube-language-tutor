@@ -52,6 +52,8 @@
 
     P.head = el('div', { class: 'ly-head' });
     P.body = el('div', { class: 'ly-body' });
+    P.body.addEventListener('mouseup', () => setTimeout(showSelTool, 0));
+    P.body.addEventListener('scroll', hideSelTool);
     P.foot = el('div', { class: 'ly-foot' });
     P.root = el('div', { class: 'ly-panel' }, [P.head, P.body, P.foot]);
 
@@ -141,6 +143,97 @@
     P.syncExportBtn();
     return el('div', { class: 'ly-export' }, [label, el('span', { class: 'ly-spacer' }), excel, anki]);
   }
+
+  // ---------- 框選句子的一小段 ----------
+  // 句子太長時常常只想記住其中一個子句，或是只有某個結構看不懂。
+  // 在法文那一行拉出選取，就跳出「解說 / 收藏」。
+  let selTool = null;
+
+  function hideSelTool() {
+    if (selTool && selTool.parentNode) selTool.parentNode.removeChild(selTool);
+    selTool = null;
+  }
+
+  function selectionInfo() {
+    const sel = window.getSelection && window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const text = String(sel).trim();
+    if (text.length < 2) return null;
+
+    // 只認法文那一行的選取：中文翻譯或單字卡不需要這個功能
+    let node = sel.anchorNode;
+    if (node && node.nodeType === 3) node = node.parentNode;
+    const fr = node && node.closest && node.closest('.ly-fr');
+    if (!fr || !P.root || !P.root.contains(fr)) return null;
+    // 整句都選起來的話，用原本的句子收藏就好
+    if (text === fr.textContent.trim()) return null;
+
+    const li = fr.closest('.ly-sent');
+    return {
+      text,
+      sentence: fr.textContent.trim(),
+      sentenceZh: li && li.querySelector('.ly-zh') ? li.querySelector('.ly-zh').textContent.trim() : '',
+      rect: sel.getRangeAt(0).getBoundingClientRect(),
+      li
+    };
+  }
+
+  function showSelTool() {
+    const info = selectionInfo();
+    hideSelTool();
+    if (!info) return;
+
+    const explain = el('button', { class: 'ly-mini', text: '💡 解說' });
+    const save = el('button', { class: 'ly-mini', text: '★ 收藏這段' });
+    selTool = el('div', { class: 'ly-seltool' }, [explain, save]);
+
+    const base = P.root.getBoundingClientRect();
+    selTool.style.left = Math.max(4, Math.min(info.rect.left - base.left, base.width - 160)) + 'px';
+    selTool.style.top = (info.rect.bottom - base.top + 6) + 'px';
+    P.root.appendChild(selTool);
+
+    explain.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      hideSelTool();
+      P.on.explainFragment && P.on.explainFragment(info);
+    });
+    save.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      hideSelTool();
+      P.on.starFragment && P.on.starFragment(info);
+    });
+  }
+
+  // 顯示解說：接在那個句子底下，保留上下文
+  P.showExplain = function (info, state) {
+    if (!info.li || !document.contains(info.li)) return;
+    const old = info.li.nextElementSibling;
+    if (old && old.classList && old.classList.contains('ly-explain')) old.remove();
+
+    const box = el('div', { class: 'ly-explain' }, [
+      el('div', { class: 'ly-ex-frag', text: '「' + info.text + '」' })
+    ]);
+
+    if (state.loading) {
+      box.appendChild(el('div', { class: 'ly-msg' }, [el('span', { class: 'ly-spin' }), '解說中…']));
+    } else if (state.error) {
+      box.appendChild(el('div', { class: 'ly-msg ly-err', text: state.error }));
+    } else {
+      const d = state.data;
+      box.appendChild(el('div', { class: 'ly-ex-meaning', text: d.meaning || '' }));
+      if ((d.breakdown || []).length) {
+        box.appendChild(el('ul', { class: 'ly-ex-parts' }, d.breakdown.map((b) =>
+          el('li', {}, [el('b', { text: b.part }), ' ', el('span', { text: b.meaning })]))));
+      }
+      if (d.note) box.appendChild(el('div', { class: 'ly-ex-note', text: d.note }));
+      box.appendChild(el('div', { class: 'ly-ex-foot' }, [
+        starBtn({ type: 'fragment', word: info.text, meaning: d.meaning || '',
+                  lemma: '', pos: '', note: d.note || '' }),
+        el('button', { class: 'ly-mini', text: '收起', onclick: () => box.remove() })
+      ]));
+    }
+    info.li.insertAdjacentElement('afterend', box);
+  };
 
   // 收藏鈕。狀態一律跟 app 查，不要只記在 DOM 的 class 上——
   // 面板任何一次重繪（例如切換「顯示翻譯」）都會把 class 洗掉。
@@ -242,6 +335,7 @@
     P.head.textContent = '';
     headerRow(vm).forEach((n) => n && P.head.appendChild(n));
 
+    hideSelTool();
     P.body.textContent = '';
     P.foot.textContent = '';
     P.syncExportBtn = null;
