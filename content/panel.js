@@ -120,6 +120,23 @@
     ]);
   }
 
+  // 隨時可以匯出目前收藏的，不必等整部影片看完（常常是分好幾次看的）
+  function exportStarredBtn() {
+    const b = el('button', { class: 'ly-btn ly-export-starred' });
+    P.syncExportBtn = () => {
+      const n = P.on.starredCount ? P.on.starredCount() : 0;
+      b.textContent = n ? `★ 匯出收藏 (${n})` : '★ 尚未收藏';
+      b.title = n ? '把目前收藏的項目匯出成 Anki CSV' : '點單字或句子旁邊的 ★ 就能收藏';
+      b.classList.toggle('ly-disabled', !n);
+    };
+    b.addEventListener('click', () => {
+      if (P.on.starredCount && !P.on.starredCount()) return;
+      P.on.exportCsv && P.on.exportCsv('starred');
+    });
+    P.syncExportBtn();
+    return b;
+  }
+
   // 收藏鈕。狀態一律跟 app 查，不要只記在 DOM 的 class 上——
   // 面板任何一次重繪（例如切換「顯示翻譯」）都會把 class 洗掉。
   function starBtn(item, extraClass) {
@@ -135,6 +152,7 @@
       b.classList.toggle('saved', next);
       b.title = next ? '已收藏，點一下取消' : '加入生字本';
       if (P.on.toggleStar) P.on.toggleStar(item, next);
+      if (P.syncExportBtn) P.syncExportBtn();
     });
     return b;
   }
@@ -221,6 +239,7 @@
 
     P.body.textContent = '';
     P.foot.textContent = '';
+    P.syncExportBtn = null;
     P.foot.classList.remove('ly-foot-wrap');
 
     if (vm.kind === 'launcher') {
@@ -323,7 +342,7 @@
       if (vm.cached) P.body.appendChild(el('div', { class: 'ly-foot-note', text: '（這段用的是之前的分析結果，沒有重新呼叫 API）' }));
 
       P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽整段', onclick: () => P.on.replaySegment && P.on.replaySegment() }));
-      P.foot.appendChild(el('button', { class: 'ly-btn', text: '匯出 CSV', title: '匯出這部影片已收集的生字', onclick: () => P.on.exportCsv && P.on.exportCsv('all') }));
+      P.foot.appendChild(exportStarredBtn());
       P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '繼續播放 ▶', onclick: () => P.on.continue && P.on.continue() }));
     }
   };

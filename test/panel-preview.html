@@ -29,6 +29,7 @@ const handlers = {
   restart:()=>{}, exportCsv:()=>{}, continue:()=>{},
   replaySegment:()=>{}, playSentence:()=>{}, toggleEnabled:()=>{}, openOptions:()=>{},
   isStarred: (t, w) => starred.has(skey(t, w)),
+  starredCount: () => starred.size,
   toggleStar: (item, on) => { on ? starred.add(skey(item.type, item.word)) : starred.delete(skey(item.type, item.word)); }
 };
 window.__starred = starred;

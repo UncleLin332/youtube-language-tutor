@@ -380,7 +380,8 @@
     exportCsv,
     restart,
     isStarred,
-    toggleStar
+    toggleStar,
+    starredCount: () => S.starred.length
   };
 
   // ---------- 啟動／換頁 ----------
