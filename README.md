@@ -42,6 +42,7 @@
 | `background/service-worker.js` | 呼叫 API（content script 受 CORS 限制不能直接打）＋ 結果快取 |
 | `shared/anki.js` | 匯出成 Anki 可直接匯入的 CSV（面板與設定頁共用） |
 | `options/` | 設定頁與生字本 |
+| `icons/` | 工具列與商店圖示（**目前是佔位圖**，見下方「上架」） |
 
 ## 開發用的測試
 
@@ -244,6 +245,41 @@ t=30     暫停 → 0 等待
 
 在真實影片頁上驗證過：視窗 268px 時走浮動、1440px 時掛進側欄並渲染在 (1028, 68)、寬 396px。
 
+## 上架
+
+```bash
+./package.sh     # 先跑完整測試，再打包成 dist/youtube-language-tutor-<版本>.zip
+```
+
+打包用**白名單**：只收 `manifest.json`、`icons/`、`content/`、`background/`、`options/`、`shared/`。
+用排除法的話，哪天多一個資料夾就會默默被包進去。目前 17 個檔案、44KB。
+
+| 檔案 | 作用 |
+|---|---|
+| `PRIVACY.md` | 隱私權政策。商店的「隱私權政策網址」就填這個檔在 GitHub 上的連結 |
+| `store/listing.md` | 商店列表文案、單一用途說明、每個權限的理由、資料用途申報怎麼勾 |
+| `package.sh` | 打包 |
+
+```bash
+python3 store/make-icons.py    # 從 store/icon-source-2000.png 產生 icons/ 的四個尺寸
+```
+
+要換圖的話覆蓋 `store/icon-source-2000.png` 再跑一次，`manifest.json` 不用改。
+寫成腳本是因為手動縮圖容易漏掉兩件事：**四角要去背**（原圖的圓角外面是白的，
+留著的話在深色工具列上會看到一圈白），以及**用 LANCZOS 縮小**。
+
+還缺 1280×800 的截圖與 440×280 的小宣傳圖，建議的截圖內容列在 `store/listing.md`。
+
+`test/run.js` 會檢查 manifest 裡的圖示路徑真的有檔案——指到不存在的圖，
+Chrome 是**整包載入失敗**，不是只少一張圖。
+
+### 為什麼 content script 的比對範圍不能收窄成 `/watch`
+
+送審時這一條要寫清楚，否則會被問。YouTube 是單頁應用程式：從首頁點進影片不會重新載入頁面，
+所以如果只在 `*://www.youtube.com/watch*` 注入，使用者從首頁點進去時指令碼根本不會被載入。
+`app.js` 是靠監聽 `yt-navigate-finish` 來換頁的，前提是它已經活著。
+比對範圍涵蓋整站、但只在 `/watch` 上實際動作。
+
 ## 已知限制
 
 - **影片必須有字幕**（自動字幕可以）。沒有字幕的影片無法分析。
@@ -256,7 +292,6 @@ t=30     暫停 → 0 等待
 - YouTube 會改 DOM，面板的元件名稱換過不只一次（舊的 `ytd-transcript-segment-renderer`
   在新版已經完全不存在）。哪天失效的話主要修 `content/transcript.js` 最上面那幾個選擇器。
 - 只處理 `www.youtube.com` 的 `/watch` 頁面，不支援嵌入播放器與 YouTube Music。
-- 整個流程已在真實 YouTube 頁面上驗證過（字幕抓取、切段），但**呼叫 API 那段需要你的 key 才能跑**，
-  所以還沒有端對端實測過一次完整的分析。設定頁的「測試 API key」可以單獨驗。
-- Gemini 的模型代號與 Interactions API 格式是 2026/11/16 依 Google 官方文件寫的，沒有用真實 key 跑過。
-  如果出現 404，到設定頁換一個模型（Google 的模型淘汰得很快）。
+- 整個流程已用真實 API key 在真實 YouTube 頁面上端對端跑過多次（2026/11）：字幕抓取、切段、
+  分析、複習、匯出都正常。
+- Google 的模型淘汰得很快，Gemini 那邊哪天出現 404 的話，到設定頁換一個模型即可。
