@@ -345,7 +345,10 @@
       P.body.appendChild(el('div', { class: 'ly-launch' }, [
         el('div', { class: 'ly-launch-title', text: '要用這部影片學語言嗎？' }),
         el('div', { class: 'ly-launch-sub', text:
-          '啟動後會抓字幕、每隔一段自動暫停並整理單字片語。沒按之前完全不會動作，也不會用到 API。' })
+          '啟動後會抓字幕、每隔一段自動暫停並整理單字片語。沒按之前完全不會動作，也不會用到 API。' }),
+        el('div', { class: 'ly-launch-sub ly-launch-note', text:
+          '按下去之後，這部影片的字幕文字與標題會送到你在設定頁選的 AI 供應商'
+          + '（Anthropic 或 Google）進行分析，不會經過本擴充作者的伺服器。' })
       ]));
       P.foot.appendChild(el('button', {
         class: 'ly-btn ly-wide ly-primary', text: '開始學習這部影片',

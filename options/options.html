@@ -32,6 +32,12 @@
   .ok { color:#2a9d5c; } .err { color:#d64545; }
   hr { border:0; border-top:1px solid var(--line); margin:30px 0; }
   .check { display:flex; align-items:center; gap:8px; font-weight:400; }
+  .notice { border:1px solid var(--line); background:var(--card); border-radius:10px;
+            padding:14px 16px; font-size:12.5px; color:var(--dim); line-height:1.7; }
+  .notice strong { color:var(--fg); display:block; font-size:13px; margin-bottom:6px; }
+  .notice ul { margin:0; padding-left:18px; }
+  .notice li { margin:2px 0; }
+  .notice a { color:var(--accent); }
 </style>
 </head>
 <body>
@@ -80,7 +86,24 @@
   </div>
 
   <div class="row">
-    <div class="hint">API key 只存在這台電腦的瀏覽器裡（chrome.storage.local），不會傳去其他地方。</div>
+    <div class="notice">
+      <strong>你的資料會去哪裡</strong>
+      <ul>
+        <li><b>會送出：</b>你在某支影片上按下「開始學習這部影片」之後，<b>該影片的字幕文字、影片標題與網址</b>
+            會送到你上面選的 AI 供應商（Anthropic 或 Google），用來整理單字、翻譯與解說。
+            沒按之前不會抓字幕，也不會發出任何請求。</li>
+        <li><b>不會送出：</b>API key 只存在這台電腦的瀏覽器裡（<code>chrome.storage.local</code>），
+            只會放進送往該供應商的請求標頭。請求由你的瀏覽器直接送出，<b>不經過本擴充作者的伺服器</b>，
+            作者收不到你的 key、字幕或任何使用紀錄。</li>
+        <li><b>存在本機：</b>生字本、設定與分析結果的快取都只留在這台電腦，不會同步到雲端。</li>
+        <li>你送出的內容如何被使用，依你選的供應商的條款而定：
+            <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noreferrer">Anthropic</a> ·
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a>。
+            本擴充的隱私權政策：
+            <a href="https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md"
+               target="_blank" rel="noreferrer">PRIVACY.md</a></li>
+      </ul>
+    </div>
   </div>
 
   <div class="row two">
