@@ -365,6 +365,22 @@
         P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽整段',
           onclick: () => P.on.replaySegment && P.on.replaySegment() }));
       }
+    } else if (vm.kind === 'mismatch') {
+      P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [
+        `抓到的字幕是${vm.got}，不是你設定的${vm.want}。`
+      ]));
+      if (vm.sample) P.body.appendChild(el('div', { class: 'ly-raw' }, [
+        el('div', { class: 'ly-raw-line', text: vm.sample + '…' })
+      ]));
+      P.body.appendChild(el('div', { class: 'ly-foot-note' }, [
+        'YouTube 會依你的帳號語言挑字幕軌，多國字幕的影片常常就挑到中文；'
+        + '新版的轉錄稿面板沒有切換語言的選項，擴充也改不了。'
+        + '可以換一支沒有中文字幕的影片，或到設定頁把學習語言改成上面偵測到的語言。'
+      ]));
+      P.foot.appendChild(el('button', { class: 'ly-btn', text: '設定',
+        onclick: () => P.on.openOptions && P.on.openOptions() }));
+      P.foot.appendChild(el('button', { class: 'ly-btn', text: '仍要用這份字幕',
+        title: '照這份字幕繼續分析', onclick: () => P.on.continueAnyway && P.on.continueAnyway() }));
     } else if (vm.kind === 'error') {
       P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [vm.msg || '發生錯誤']));
       P.foot.appendChild(el('button', { class: 'ly-btn', text: '重試', onclick: () => P.on.retry && P.on.retry() }));

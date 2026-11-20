@@ -20,6 +20,8 @@
     inflight: new Map(), // segIndex -> Promise（正在送的請求）
     active: false,       // 使用者按下「開始學習」了沒
     routed: false,        // 這支影片的面板掛上去了沒
+    forceLang: false,    // 使用者確認過要用不同語言的字幕
+    pendingCues: null,   // 語言不符時先擱著的字幕
     waitingFor: -1,      // 已經播過邊界、但筆記還沒好的那一段
     waitUntil: 0,        // 寬限期的截止秒數
     collected: [],
@@ -426,6 +428,7 @@
     },
     start,
     stop,
+    continueAnyway,
     openOptions: () => chrome.runtime.sendMessage({ type: 'openOptions' }),
     exportCsv,
     restart,
@@ -448,6 +451,7 @@
     S.mode = 'idle'; S.range = null; S.analyses = new Map(); S.inflight = new Map();
     if (S.active) setBadge(false);
     S.active = false; S.routed = false; S.waitingFor = -1;
+    S.forceLang = false; S.pendingCues = null;
     S.collected = []; S.starred = []; S.times = null;
     explains.clear();
     S.token = Symbol('detached');   // 作廢還在路上的預抓，回來時不會再寫進狀態
@@ -502,6 +506,36 @@
         Panel.render({ kind: 'error', msg: hint, total: 0, enabled: S.enabled, active: true });
         return;
       }
+      if (r.mismatch && !S.forceLang) {
+        S.pendingCues = r;
+        Panel.render({
+          kind: 'mismatch',
+          got: r.mismatch.gotName,
+          want: LY.LANGS[S.settings.targetLang] || S.settings.targetLang,
+          sample: r.cues.slice(0, 2).map((c) => c.text).join(' ').slice(0, 60),
+          total: 0, enabled: S.enabled, active: true
+        });
+        return;
+      }
+      await applyCues(r, token);
+    } catch (e) {
+      S.active = false;
+      setBadge(false);
+      Panel.render({ kind: 'error', msg: String((e && e.message) || e), total: 0, enabled: S.enabled, active: true });
+    }
+  }
+
+  // 使用者在語言不符的提示上按「仍要繼續」
+  function continueAnyway() {
+    const r = S.pendingCues;
+    if (!r) return;
+    S.forceLang = true;
+    S.pendingCues = null;
+    applyCues(r, S.token);
+  }
+
+  async function applyCues(r, token) {
+    try {
       S.cues = r.cues;
       S.title = r.title || document.title;
       // 之前看這部影片時收藏過的項目也算進來，完成畫面的數字和匯出才不會漏
@@ -513,11 +547,12 @@
       S.sourceLabel = (r.source === 'panel' ? '轉錄稿面板' : '字幕檔') +
         (r.langUsed ? ' · ' + r.langUsed + (r.isAuto ? ' 自動產生' : '') : '');
 
-      video.addEventListener('timeupdate', onTimeUpdate);
-      video.addEventListener('seeked', onSeeked);
-      video.addEventListener('play', onPlay);
-      video.addEventListener('ended', onEnded);
-      arm(video.currentTime);
+      // 注意：這裡已經不在 start() 的作用域裡，video 要從 S 拿
+      S.video.addEventListener('timeupdate', onTimeUpdate);
+      S.video.addEventListener('seeked', onSeeked);
+      S.video.addEventListener('play', onPlay);
+      S.video.addEventListener('ended', onEnded);
+      arm(S.video.currentTime);
       S.mode = 'watching';
       ensureAhead();          // 不等 1.2 秒，一載入就開始整理第一段
 

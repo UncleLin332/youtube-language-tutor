@@ -109,5 +109,27 @@ function firstBoundary(app) {
     t.eq(app.video.paused, false, '一路播過去不暫停');
   }
 
+  // ---------------------------------------------------------------
+  t.section('字幕語言和設定不符 → 不要默默分析下去');
+  {
+    const zh = Array.from({ length: 12 }, (_, i) => ({
+      start: i * 7, end: (i + 1) * 7, text: '大家好我是日語教師今天的影片是實用日語' }));
+    const app = await t.createApp({ cues: zh, settings: { targetLang: 'ja' } });
+    await app.handlers.start();
+    await app.settle(60);
+
+    const last = app.lastRender();
+    t.eq(last.kind, 'mismatch', '顯示語言不符的提示');
+    t.eq(last.got, '中文', '說出抓到的是什麼語言');
+    t.eq(last.want, '日文', '說出設定的是什麼語言');
+    t.eq(app.calls.filter((c) => c.type === 'analyze').length, 0, '沒有白花 API 的錢');
+
+    await app.handlers.continueAnyway();
+    await app.settle(60);
+    const after = app.lastRender().kind;
+    t.ok(after === 'ready' || after === 'watching', '按「仍要用這份字幕」之後照常開始', '狀態是 ' + after);
+    t.ok(app.renders.some((r) => r.kind === 'ready'), '有進到就緒狀態');
+  }
+
   t.finish();
 })();

@@ -114,7 +114,8 @@ async function createApp(opts) {
   };
 
   // 允許一個 process 裡建立多個實例：content script 是 IIFE，要清掉 require 快取
-  for (const f of ['/content/lib.js', '/shared/anki.js', '/content/segmenter.js', '/content/app.js']) {
+  for (const f of ['/content/lib.js', '/shared/anki.js', '/content/segmenter.js',
+                   '/content/transcript.js', '/content/app.js']) {
     delete require.cache[require.resolve(ROOT + f)];
   }
   globalThis.LY = undefined;
@@ -122,6 +123,7 @@ async function createApp(opts) {
   require(ROOT + '/content/lib.js');
   require(ROOT + '/shared/anki.js');
   require(ROOT + '/content/segmenter.js');
+  require(ROOT + '/content/transcript.js');   // checkLanguage 在這裡
 
   let handlers = null;
   LY.Panel = {
@@ -135,12 +137,18 @@ async function createApp(opts) {
   const explains = [];
   const lineCount = o.lines || 20;
   const lineSeconds = o.lineSeconds || 7;
-  LY.loadCues = async () => ({
-    cues: Array.from({ length: lineCount }, (_, i) => ({
+  const realLoad = LY.loadCues;
+  LY.loadCues = async (settings) => {
+    const cues = o.cues || Array.from({ length: lineCount }, (_, i) => ({
       start: i * lineSeconds, end: (i + 1) * lineSeconds,
-      text: `ligne ${i} avec des mots français ici` })),
-    source: 'panel', title: 'Test Video', langUsed: 'fr', isAuto: true, available: ['fr(自動)']
-  });
+      text: `ligne ${i} avec des mots français ici` }));
+    return {
+      cues,
+      // 語言檢查走真正的實作
+      mismatch: cues.length ? LY.checkLanguage(cues, settings.targetLang) : null,
+      source: 'panel', title: 'Test Video', langUsed: 'fr', isAuto: true, available: ['fr(自動)']
+    };
+  };
 
   LYAnki.download = (text, filename) => downloads.push({ text, filename });
 

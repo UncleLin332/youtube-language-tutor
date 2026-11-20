@@ -100,4 +100,31 @@ t.section('句子時間：模型回傳壞資料也不能爆');
   t.eq(LY.sentenceTimes({}, [{ text: 'A', start_line: 0, end_line: 0 }]).length, 0, 'lines 未定義也不爆');
 }
 
+// ------------------------------------------------- 字幕語言檢查
+t.section('字幕語言：抓到的和設定的對不對得上');
+{
+  // transcript.js 需要一點瀏覽器環境才載得進來
+  globalThis.document = { querySelectorAll: () => [], querySelector: () => null };
+  globalThis.window = { addEventListener() {}, postMessage() {} };
+  require(t.ROOT + '/content/transcript.js');
+
+  const cues = (arr) => arr.map((text, i) => ({ start: i * 3, end: i * 3 + 3, text }));
+  const cases = [
+    ['日文字幕配日文設定', ['こんにちは、私は日本語教師のユカです', '今日の動画は実用日本語です'], 'ja', false],
+    ['中文字幕配日文設定', ['大家好！我是日語教師Yuka', '今天的影片是實用日語'], 'ja', true],
+    ['法文字幕配法文設定', ['Bonjour les amis et bienvenue', 'Aujourd hui nous allons parler'], 'fr', false],
+    ['中文字幕配法文設定', ['大家好，今天我們來聊聊'], 'fr', true],
+    ['韓文字幕配日文設定', ['안녕하세요 여러분'], 'ja', true],
+    ['中文字幕配中文設定', ['大家好！我是日語教師Yuka'], 'zh', false],
+    ['英文字幕配法文設定', ['Hello everyone welcome back'], 'fr', false]   // 拉丁字母分不出來，不擋
+  ];
+  for (const [name, lines, want, shouldWarn] of cases) {
+    const r = LY.checkLanguage(cues(lines), want);
+    t.eq(!!r, shouldWarn, name);
+  }
+  // 前面幾行剛好全是漢字的日文，不該誤判
+  const mostlyKanji = cues(['日本語教師', '実用日本語', '美術館商店', 'これはひらがなです']);
+  t.eq(LY.checkLanguage(mostlyKanji, 'ja'), null, '前幾行全漢字的日文不會被誤判成中文');
+}
+
 t.finish();
