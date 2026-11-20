@@ -60,7 +60,7 @@
 | 權限 | 為什麼 |
 |---|---|
 | `storage` / `unlimitedStorage` | 儲存設定、生字本與分析快取。快取可能累積到數 MB，所以需要後者 |
-| `www.youtube.com` 的內容指令碼 | 顯示學習面板、讀取 YouTube 的轉錄稿、控制播放暫停與單句重播 |
+| `www.youtube.com` 的內容指令碼 | 顯示學習面板、取得你所學語言的字幕、控制播放暫停與單句重播 |
 | `api.anthropic.com` / `generativelanguage.googleapis.com` | 送出分析請求。只有這兩個網域 |
 
 本擴充**沒有**要求 `tabs`、`history`、`cookies` 或 `<all_urls>` 等權限。
