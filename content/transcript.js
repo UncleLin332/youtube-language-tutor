@@ -75,37 +75,40 @@
     } catch (e) { /* 關不掉就算了，不影響功能 */ }
   }
 
-  // ---- 次要路徑：timedtext ----
-  function pickTrack(tracks, lang) {
-    const base = (c) => String(c || '').toLowerCase().split('-')[0];
-    const want = base(lang);
-    const manual = tracks.filter((t) => t.kind !== 'asr');
-    const asr = tracks.filter((t) => t.kind === 'asr');
-    return (
-      manual.find((t) => base(t.languageCode) === want) ||
-      asr.find((t) => base(t.languageCode) === want) ||
-      manual[0] || asr[0] || null
-    );
-  }
-
-  async function fetchTimedText(baseUrl) {
-    const url = new URL(baseUrl, location.origin);
-    url.searchParams.set('fmt', 'json3');
-    const res = await fetch(url.toString(), { credentials: 'include' });
-    if (!res.ok) throw new Error('timedtext ' + res.status);
-    const txt = await res.text();
-    // YouTube 現在常常回 200 + 空 body（缺 PO token）
-    if (!txt.trim()) throw new Error('timedtext 回傳空內容');
-    const data = JSON.parse(txt);
+  // ---- 主要路徑：跟播放器要字幕檔 ----
+  //
+  // captionTracks 裡的 baseUrl 直接 fetch 會回 200 空 body（缺 proof-of-origin 權杖）。
+  // bridge.js 會叫播放器切到目標語言、攔下它自己發的網址再交給我們，那個網址帶著權杖。
+  // 好處是：語言跟著設定走、不用打開 YouTube 的轉錄稿面板、沒有面板的影片也能用。
+  function parseJson3(text) {
+    const data = JSON.parse(text);
     const cues = [];
     for (const ev of data.events || []) {
-      if (ev.aAppend || !ev.segs) continue;
-      const text = ev.segs.map((s) => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
-      if (!text) continue;
+      if (ev.aAppend || !ev.segs) continue;      // 滾動字幕的重複片段
+      const t = ev.segs.map((s) => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
+      if (!t) continue;
       const start = (ev.tStartMs || 0) / 1000;
-      cues.push({ start, end: start + (ev.dDurationMs || 2000) / 1000, text });
+      cues.push({ start, end: start + (ev.dDurationMs || 2000) / 1000, text: t });
     }
     return cues;
+  }
+
+  async function fetchViaPlayer(settings) {
+    // 切軌加上等播放器發請求，會花幾秒，所以等久一點
+    const res = await LY.askPage('captionUrl', { lang: settings.targetLang }, 20000);
+    if (!res) return { cues: [], reason: 'bridge-timeout' };
+    if (res.error) return { cues: [], reason: res.error, available: res.available };
+    try {
+      const u = new URL(res.url);
+      u.searchParams.set('fmt', 'json3');
+      const r = await fetch(u.toString(), { credentials: 'include' });
+      if (!r.ok) return { cues: [], reason: 'http-' + r.status };
+      const txt = await r.text();
+      if (!txt.trim()) return { cues: [], reason: 'empty' };
+      return { cues: parseJson3(txt), lang: res.lang, isAuto: res.isAuto };
+    } catch (e) {
+      return { cues: [], reason: String((e && e.message) || e) };
+    }
   }
 
   function cleanup(cues) {
@@ -169,21 +172,28 @@
     const tracks = (info && info.tracks) || [];
     let cues = [];
     let source = '';
-    let track = null;
+    let lang = null;
+    let isAuto = null;
+    let reason = null;
 
-    const panel = await scrapePanel();
-    if (panel.cues.length >= 3) {
-      cues = panel.cues;
-      source = 'panel';
-      if (panel.opened) closePanel();
-    } else if (tracks.length) {
-      track = pickTrack(tracks, settings.targetLang);
-      if (track) {
-        try {
-          cues = await fetchTimedText(track.baseUrl);
-          source = 'timedtext';
-        } catch (e) {
-          LY.log('timedtext 也失敗了：', e.message);
+    // 1. 跟播放器要（語言可控）
+    const viaPlayer = await fetchViaPlayer(settings);
+    if (viaPlayer.cues.length >= 3) {
+      cues = viaPlayer.cues;
+      source = 'player';
+      lang = viaPlayer.lang;
+      isAuto = viaPlayer.isAuto;
+    } else {
+      reason = viaPlayer.reason;
+      // 這支影片就是沒有這個語言的字幕：退回去抓面板也只會拿到別的語言，
+      // 不如直接講清楚，也省得去動 YouTube 的面板
+      if (reason !== 'no-track' && reason !== 'no-captions') {
+        LY.log('跟播放器要字幕失敗（' + reason + '），改抓轉錄稿面板');
+        const panel = await scrapePanel();
+        if (panel.cues.length >= 3) {
+          cues = panel.cues;
+          source = 'panel';
+          if (panel.opened) closePanel();
         }
       }
     }
@@ -193,10 +203,11 @@
       cues: clean,
       mismatch: clean.length ? LY.checkLanguage(clean, settings.targetLang) : null,
       source,
+      reason,
       title: (info && info.title) || document.title,
-      langUsed: track ? track.languageCode : (tracks[0] ? tracks[0].languageCode : null),
-      isAuto: track ? track.kind === 'asr' : (tracks[0] ? tracks[0].kind === 'asr' : null),
-      available: tracks.map((t) => t.languageCode + (t.kind === 'asr' ? '(自動)' : ''))
+      langUsed: lang || (tracks[0] ? tracks[0].languageCode : null),
+      isAuto: isAuto == null ? (tracks[0] ? tracks[0].kind === 'asr' : null) : isAuto,
+      available: viaPlayer.available || tracks.map((t) => t.languageCode + (t.kind === 'asr' ? '(自動)' : ''))
     };
   };
 })();

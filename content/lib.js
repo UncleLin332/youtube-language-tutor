@@ -73,9 +73,10 @@
   };
 
   // 向主世界的 bridge.js 問資料
-  LY.askPage = (kind, payload) => new Promise((resolve) => {
+  LY.askPage = (kind, payload, timeout) => new Promise((resolve) => {
     const id = 'ly_' + Math.random().toString(36).slice(2);
-    const timer = setTimeout(() => { window.removeEventListener('message', on); resolve(null); }, 4000);
+    const timer = setTimeout(() => { window.removeEventListener('message', on); resolve(null); },
+      timeout == null ? 4000 : timeout);
     function on(e) {
       if (e.source !== window) return;
       const d = e.data;

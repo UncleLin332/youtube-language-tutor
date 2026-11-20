@@ -498,8 +498,12 @@
       const r = await LY.loadCues(S.settings);
       if (S.token !== token) return;
       if (!r.cues.length) {
-        const hint = r.available && r.available.length
-          ? `這部影片有字幕（${r.available.join('、')}），但抓不到內容，試著重新整理頁面。`
+        const want = LY.LANGS[S.settings.targetLang] || S.settings.targetLang;
+        const list = (r.available || []).join('、');
+        const hint =
+          r.reason === 'no-track' ? `這部影片沒有${want}字幕。${list ? '可用的語言：' + list : ''}`
+          : r.reason === 'no-captions' ? '這部影片沒有任何字幕，無法分析。'
+          : list ? `這部影片有字幕（${list}），但抓不到內容，試著重新整理頁面。`
           : '這部影片沒有可用的字幕，無法分析。';
         S.active = false;
         setBadge(false);
@@ -544,7 +548,7 @@
         S.starred = book.filter((b) => typeof b.url === 'string' && b.url.includes(S.videoId));
       } catch (e) { S.starred = []; }
       S.segments = LY.buildSegments(r.cues, S.settings.segmentSeconds);
-      S.sourceLabel = (r.source === 'panel' ? '轉錄稿面板' : '字幕檔') +
+      S.sourceLabel = (r.source === 'player' ? '字幕軌' : r.source === 'panel' ? '轉錄稿面板' : '字幕') +
         (r.langUsed ? ' · ' + r.langUsed + (r.isAuto ? ' 自動產生' : '') : '');
 
       // 注意：這裡已經不在 start() 的作用域裡，video 要從 S 拿
