@@ -268,7 +268,14 @@ python3 store/make-icons.py    # 從 store/icon-source-2000.png 產生 icons/ �
 寫成腳本是因為手動縮圖容易漏掉兩件事：**四角要去背**（原圖的圓角外面是白的，
 留著的話在深色工具列上會看到一圈白），以及**用 LANCZOS 縮小**。
 
-還缺 1280×800 的截圖與 440×280 的小宣傳圖，建議的截圖內容列在 `store/listing.md`。
+```bash
+python3 store/make-screenshots.py <原圖資料夾> store/screenshots
+```
+
+商店截圖在 `store/screenshots/`，三張 1280×800。腳本做兩件事：把全視窗截圖裁成
+商店只接受的 1.6 比例，並把兩個帳號頭像模糊掉。
+
+素材只剩 440×280 的小宣傳圖還沒做。
 
 `test/run.js` 會檢查 manifest 裡的圖示路徑真的有檔案——指到不存在的圖，
 Chrome 是**整包載入失敗**，不是只少一張圖。
