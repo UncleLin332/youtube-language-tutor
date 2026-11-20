@@ -1,8 +1,8 @@
-# 隱私權政策 · YouTube 語言學習助手
+# 隱私權政策 · Language Tutor in YouTube
 
-最後更新：2026-11-19
+最後更新：2026-11-21
 
-這份政策只適用於 Chrome 擴充功能「YouTube 語言學習助手」（以下稱「本擴充」）。
+這份政策只適用於 Chrome 擴充功能「Language Tutor in YouTube」（以下稱「本擴充」）。
 
 ## 一句話版本
 
