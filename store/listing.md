@@ -154,11 +154,15 @@ https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md
 | 商店圖示 | 128×128 | 必要 | `icons/icon128.png` ✅ |
 | 截圖 | 1280×800 | 至少 1 張，最多 5 張 | `store/screenshots/` ✅ 三張 |
 | 小宣傳圖 | 440×280 | 必要 | `store/promo-440x280.png` ✅ |
-| 大宣傳圖 | 1400×560 | 選填 | 沒做 |
+| 跑馬燈宣傳圖 | 1400×560 | 選填 | `store/promo-1400x560.png` ✅ |
 
-小宣傳圖是用 `store/make-promo.py` 排出來的，不是生圖模型畫的——生成的圖
+兩張宣傳圖都是 `store/make-promo.py` 排出來的，不是生圖模型畫的——生成的圖
 會在畫面裡寫出不存在的單字（試過一次，字幕那行變成
 `I active subtitles n active suitoos.`）。
+
+跑馬燈那張商店規定 **JPEG 或 24 位元 PNG、不能有 alpha 透明層**。腳本的底圖
+用 RGB 模式建（不是 RGBA），河童貼上去時拿它自己的 alpha 當遮罩，貼完就沒有
+透明層了，最後再 assert 一次確認。
 
 排版遵守官方素材指引的兩條建議：**避免文字**（只有名稱和一行說明，沒有功能列表）
 和**縮到一半還要看得懂**（字級是演算法套出來的，不是寫死的，所以改字不會爆版）。
