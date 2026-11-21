@@ -26,8 +26,14 @@
     waitUntil: 0,        // 寬限期的截止秒數
     collected: [],
     starred: [],         // 這部影片打過星號的項目
-    times: null          // 目前這段的「句子 → 時間」對應表
+    times: null,         // 目前這段的「句子 → 時間」對應表
+    counted: false,      // 這部影片的「看完」已經記過一次了沒
+    finished: 0          // 總共看完幾部（跨影片，存在 storage）
   };
+
+  // 看完第幾部影片才在完成畫面顯示贊助連結。第一次就開口要錢，
+  // 使用者連這東西好不好用都還不知道。
+  const SUPPORT_AFTER = 3;
 
   // 筆記還沒好時最多讓影片多播幾秒；超過就還是停下來，改成先顯示這段的字幕原文
   const PAUSE_GRACE_SECONDS = 20;
@@ -257,15 +263,32 @@
     });
   }
 
-  function showDone() {
+  // 同一部影片「從頭再看」再看完一次，不重複計數。
+  // 存取失敗就當作沒看完過——贊助連結不出現，比畫面壞掉好。
+  async function bumpFinished() {
+    if (S.counted) return S.finished;
+    S.counted = true;
+    try {
+      const got = await chrome.storage.local.get('finished');
+      S.finished = (got.finished || 0) + 1;
+      await chrome.storage.local.set({ finished: S.finished });
+    } catch (e) {
+      S.finished = 0;
+    }
+    return S.finished;
+  }
+
+  async function showDone() {
     S.mode = 'done';
     S.range = null;
+    const finished = await bumpFinished();
     const count = (t) => S.collected.filter((c) => c.type === t).length;
     Panel.render({
       kind: 'done',
       enabled: S.enabled,
       total: S.segments ? S.segments.length : 0,
       segment: null,
+      support: finished >= SUPPORT_AFTER,
       stats: {
         title: S.title,
         total: S.segments ? S.segments.length : 0,
@@ -452,7 +475,7 @@
     if (S.active) setBadge(false);
     S.active = false; S.routed = false; S.waitingFor = -1;
     S.forceLang = false; S.pendingCues = null;
-    S.collected = []; S.starred = []; S.times = null;
+    S.collected = []; S.starred = []; S.times = null; S.counted = false;
     explains.clear();
     S.token = Symbol('detached');   // 作廢還在路上的預抓，回來時不會再寫進狀態
     clearTimeout(aheadTimer);

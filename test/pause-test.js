@@ -131,5 +131,42 @@ function firstBoundary(app) {
     t.ok(app.renders.some((r) => r.kind === 'ready'), '有進到就緒狀態');
   }
 
+  // ---------------------------------------------------------------
+  // 贊助連結只在完成畫面出現，而且要看完幾部之後才出現。第一次就開口要錢，
+  // 使用者連這東西好不好用都還不知道。門檻寫在 app.js 的 SUPPORT_AFTER。
+  t.section('贊助連結的出現時機');
+  {
+    const finish = async (app) => {
+      await app.handlers.start();
+      await app.settle();
+      app.fire('ended', app.video.duration);
+      await app.settle();
+      return app.lastRender();
+    };
+
+    const first = await t.createApp();
+    const r1 = await finish(first);
+    t.eq(r1.kind, 'done', '播完進到完成畫面');
+    t.eq(r1.support, false, '第一次看完不顯示贊助連結');
+    t.eq(first.store.finished, 1, '看完的部數記下來了');
+
+    const third = await t.createApp();
+    third.store.finished = 2;          // 之前已經看完兩部
+    const r3 = await finish(third);
+    t.eq(r3.support, true, '第三部看完才顯示');
+    t.eq(third.store.finished, 3, '計數接著累加，不是從頭算');
+
+    // 同一部「從頭再看」再看完一次，不應該灌水
+    third.fire('ended', third.video.duration);
+    await third.settle();
+    t.eq(third.store.finished, 3, '同一部重看完不重複計數');
+
+    // 學習途中的畫面不該出現贊助連結
+    t.ok(
+      third.renders.filter((r) => r.kind !== 'done').every((r) => !r.support),
+      '只有完成畫面有，學習途中沒有'
+    );
+  }
+
   t.finish();
 })();

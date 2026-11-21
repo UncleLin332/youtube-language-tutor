@@ -427,7 +427,21 @@
         ]),
         st.starred
           ? null
-          : el('div', { class: 'ly-done-hint', text: '下次看的時候，點單字旁邊的 ★ 就能收進生字本。' })
+          : el('div', { class: 'ly-done-hint', text: '下次看的時候，點單字旁邊的 ★ 就能收進生字本。' }),
+        // 看完幾部之後才出現（見 app.js 的 SUPPORT_AFTER），而且只在這個畫面。
+        // 學習途中不打擾，完成畫面是使用者剛拿到東西、手邊沒事的那一刻。
+        vm.support
+          ? el('div', { class: 'ly-support' }, [
+              el('a', {
+                class: 'ly-support-link',
+                href: 'https://ko-fi.com/kappa46122',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                text: '☕ 請我喝杯咖啡'
+              }),
+              el('div', { class: 'ly-support-note', text: '免費、沒有廣告、不收集資料。贊助不影響任何功能。' })
+            ])
+          : null
       ]));
 
       P.foot.classList.add('ly-foot-wrap');
