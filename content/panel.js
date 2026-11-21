@@ -437,9 +437,9 @@
                 href: 'https://ko-fi.com/kappa46122',
                 target: '_blank',
                 rel: 'noopener noreferrer',
-                text: '☕ 請我喝杯咖啡'
+                text: '☕ 請河童喝杯咖啡'
               }),
-              el('div', { class: 'ly-support-note', text: '免費、沒有廣告、不收集資料。贊助不影響任何功能。' })
+              el('div', { class: 'ly-support-note', text: '如果對你有幫助的話' })
             ])
           : null
       ]));
