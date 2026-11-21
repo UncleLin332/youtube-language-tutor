@@ -175,6 +175,11 @@ https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md
 | 截圖 | 1280×800 | 至少 1 張，最多 5 張 | `store/screenshots/` ✅ 三張 |
 | 小宣傳圖 | 440×280 | 必要 | `store/promo-440x280.png` ✅ |
 | 跑馬燈宣傳圖 | 1400×560 | 選填 | `store/promo-1400x560.png` ✅ |
+| 通用宣傳影片 | YouTube 網址 | 選填 | 還沒做 |
+
+宣傳影片那格要的是一支 YouTube 影片網址。做了使用教學影片的話就填這裡——
+那是商店列表上唯一能展示「自動暫停 → 筆記出現 → 收藏 → 匯出」這個流程的地方，
+靜態截圖講不出時間感。等審查通過之後再補，審查期間不要動商店列表。
 
 兩張宣傳圖都是 `store/make-promo.py` 排出來的，不是生圖模型畫的——生成的圖
 會在畫面裡寫出不存在的單字（試過一次，字幕那行變成

@@ -25,7 +25,12 @@ OUT = ROOT / 'store' / 'screenshots'
 TARGET = (1280, 800)
 RATIO = TARGET[0] / TARGET[1]
 
-# 兩個帳號頭像的位置（原圖 2000px 寬的座標）
+# 兩個帳號頭像的位置（原圖 2000px 寬的座標）。
+#
+# 這個模糊是為了舊的瑪利歐頭像——別人的角色，不該出現在商業商店列表上。
+# YouTube 帳號的頭像後來換成河童了，和擴充是同一隻，那就變成自家的東西，
+# 反而值得留著。**重拍截圖的話把這行改成 AVATARS = []**，
+# 只有左邊那顆瀏覽器設定檔的頭像要不要留，自己看一眼再決定。
 AVATARS = [(1931, 113, 15), (1952, 174, 22)]
 
 sources = sorted(p for p in RAW.iterdir() if p.suffix.lower() in ('.webp', '.png', '.jpg'))
