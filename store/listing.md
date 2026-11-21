@@ -73,6 +73,18 @@ https://ko-fi.com/kappa46122
 **類別**：教育（Education）
 **語言**：繁體中文
 
+**其他欄位**
+
+| 欄位 | 填什麼 |
+|---|---|
+| 官方網址 | **留空**。這一欄要的是在 Google Search Console 驗證過所有權的網域，不是隨便一個網址。欄位下面寫「找不到已註冊的網址」就是這個意思。GitHub 不是你的網域，驗不了 |
+| 首頁網址 | `https://github.com/UncleLin332/youtube-language-tutor` |
+| 支援網址 | `https://github.com/UncleLin332/youtube-language-tutor/issues` |
+| 成人內容 | 關 |
+
+支援網址指到 issues 而不是 repo 首頁——使用者點「支援」是遇到問題要回報，
+直接到開 issue 的地方，比丟到首頁讓他自己找省一步。
+
 ---
 
 ## 2. 隱私權實務（Privacy practices 分頁）
