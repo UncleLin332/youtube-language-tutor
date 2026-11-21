@@ -38,6 +38,10 @@
   .notice ul { margin:0; padding-left:18px; }
   .notice li { margin:2px 0; }
   .notice a { color:var(--accent); }
+  .kofi { display:inline-block; text-decoration:none; font-size:13px; font-weight:600;
+          color:var(--fg); background:var(--card); border:1px solid var(--line);
+          border-radius:8px; padding:8px 14px; }
+  .kofi:hover { border-color:var(--accent); color:var(--accent); }
 </style>
 </head>
 <body>
@@ -161,6 +165,19 @@
     <button id="clearBook">清空生字本</button>
     <button id="clearCache">清除分析快取</button>
     <span class="status" id="status2"></span>
+  </div>
+
+  <hr>
+
+  <!-- 贊助連結。刻意不用 Ko-fi 官方那顆圖片按鈕：那張圖掛在 storage.ko-fi.com，
+       每次打開設定頁都會對外發一次請求，等於讓 Ko-fi 知道你的 IP 和你裝了這個擴充。
+       隱私權政策寫的是「不會以任何形式把資料傳送給作者或任何第三方」，
+       所以這裡只放純連結，按下去才會連出去。 -->
+  <div class="row">
+    <a class="kofi" href="https://ko-fi.com/kappa46122" target="_blank" rel="noopener noreferrer">☕ 請我喝杯咖啡</a>
+    <div class="hint">這個擴充是免費的開放原始碼專案，沒有廣告也不收集任何資料。
+      覺得好用的話可以支持一下，但完全不影響任何功能。<br>
+      （AI 的費用是你直接付給供應商的，不會經過我。）</div>
   </div>
 </main>
 <script src="../shared/anki.js"></script>

@@ -5,6 +5,9 @@
 
 分析可以用 **Claude（Anthropic）** 或 **Gemini（Google）**，在設定頁切換，需要你自己的 API key。
 
+免費、開放原始碼、沒有廣告、不收集任何資料。覺得好用的話可以
+[請我喝杯咖啡](https://ko-fi.com/kappa46122)，但完全不影響任何功能。
+
 ## 安裝
 
 1. 打開 `chrome://extensions`
