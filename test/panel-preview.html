@@ -16,6 +16,8 @@
 <div class="col"><h2>啟動前</h2><div id="c"></div></div>
 <div class="col"><h2>完成畫面</h2><div id="a"></div></div>
 <div class="col"><h2>段落複習畫面</h2><div id="b"></div></div>
+<div class="col"><h2>錯誤：字幕載入失敗</h2><div id="d"></div></div>
+<div class="col"><h2>錯誤：這一段整理失敗</h2><div id="e"></div></div>
 
 <script src="../content/lib.js"></script>
 <script src="../shared/anki.js"></script>
@@ -26,7 +28,7 @@ const P = LY.Panel;
 const starred = new Set();
 const skey = (t, w) => t + '\u0000' + w;
 const handlers = {
-  restart:()=>{}, exportCsv:()=>{}, continue:()=>{},
+  restart:()=>{}, exportCsv:()=>{}, continue:()=>{}, retry:()=>{}, reload:()=>{},
   replaySegment:()=>{}, playSentence:()=>{}, toggleEnabled:()=>{}, openOptions:()=>{},
   isStarred: (t, w) => starred.has(skey(t, w)),
   explainFragment: (info) => {
@@ -79,6 +81,19 @@ renderInto(document.getElementById('b'), {
     notes:['ma pauvre 為陰性用法，若對男性說則為 mon pauvre。',
            "j'étais de garde 使用未完成過去式 (Imparfait) 描述當時持續的狀態。"]
   }
+});
+
+// 這兩個都是 kind:'error'，但能做的事不一樣：
+// 沒有 segment = 字幕還沒載進來，只能整個重來；有 segment = 可以重試這段或跳過
+renderInto(document.getElementById('d'), {
+  kind:'error', enabled:true, total:0, active:true,
+  msg:'這部影片沒有法文字幕。可用的語言：英文、西班牙文'
+});
+
+renderInto(document.getElementById('e'), {
+  kind:'error', enabled:true, total:15,
+  segment:{ index:4, start:229, end:259 },
+  msg:'整理這一段時發生錯誤：API 回應逾時'
 });
 </script>
 </body>

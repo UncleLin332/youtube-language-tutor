@@ -168,5 +168,37 @@ function firstBoundary(app) {
     );
   }
 
+  // ---------------------------------------------------------------
+  // 回歸測試：字幕載入失敗的錯誤面板，和「這一段整理失敗」的錯誤面板長得一樣，
+  // 以前共用同一組按鈕。但前者根本還沒有 segments，按下去會丟
+  // TypeError: Cannot read properties of null (reading '-1')，而且沒人接。
+  t.section('字幕載入失敗：錯誤面板的按鈕不該去碰不存在的段落');
+  {
+    const rejections = [];
+    const onReject = (e) => rejections.push(e);
+    process.on('unhandledRejection', onReject);
+
+    const app = await t.createApp({ cues: [] });
+    await app.handlers.start();
+    await app.settle();
+
+    const r = app.lastRender();
+    t.eq(r.kind, 'error', '沒有字幕 → 顯示錯誤');
+    t.eq(r.segment, undefined, '這種錯誤沒有「這一段」，面板要據此換按鈕');
+    t.ok(typeof app.handlers.reload === 'function', '有「重新載入字幕」可以接');
+
+    // 每個按鈕各自判定，共用一個變數的話前一顆的錯會污染後一顆
+    const press = (fn) => { try { fn(); return null; } catch (e) { return String(e.message || e); } };
+    t.eq(press(() => app.handlers.retry()), null, '按「重試」不會丟錯');
+    t.eq(press(() => app.handlers.continue()), null, '按「略過這段」不會丟錯');
+    t.eq(press(() => app.handlers.replaySegment()), null, '「重聽整段」不會丟錯');
+
+    await app.settle();
+    t.eq(rejections.length, 0, '沒有沒人接的 promise 錯誤');
+    t.eq(app.lastRender().kind, 'error', '畫面還停在錯誤訊息上，沒被打壞');
+
+    process.removeListener('unhandledRejection', onReject);
+  }
+
   t.finish();
 })();

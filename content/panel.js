@@ -383,8 +383,15 @@
         title: '照這份字幕繼續分析', onclick: () => P.on.continueAnyway && P.on.continueAnyway() }));
     } else if (vm.kind === 'error') {
       P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [vm.msg || '發生錯誤']));
-      P.foot.appendChild(el('button', { class: 'ly-btn', text: '重試', onclick: () => P.on.retry && P.on.retry() }));
-      P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '略過這段 ▶', onclick: () => P.on.continue && P.on.continue() }));
+      // 兩種錯誤長得一樣，但能做的事不一樣：
+      // 有 segment = 複習途中這一段整理失敗，可以重試這段或跳過去繼續看；
+      // 沒有 segment = 字幕還沒載進來就失敗了，沒有「這一段」可以重試或略過。
+      if (vm.segment) {
+        P.foot.appendChild(el('button', { class: 'ly-btn', text: '重試', onclick: () => P.on.retry && P.on.retry() }));
+        P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '略過這段 ▶', onclick: () => P.on.continue && P.on.continue() }));
+      } else {
+        P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '↻ 重新載入字幕', onclick: () => P.on.reload && P.on.reload() }));
+      }
     } else if (vm.kind === 'ready') {
       P.body.appendChild(el('div', { class: 'ly-msg' }, [
         `字幕已載入（${vm.sourceLabel}），共切成 ${vm.total} 段。播到第一個停點會自動暫停。`

@@ -115,6 +115,9 @@
 
   // ---------- 複習流程 ----------
   async function enterReview(i) {
+    // 字幕還沒載進來（或載入失敗）時沒有「第 i 段」可以複習。
+    // 載入階段的錯誤面板也會走到這裡，少了這道護欄就會丟 TypeError 而且沒人接。
+    if (!S.segments || i < 0 || i >= S.segments.length) return;
     S.mode = 'review';
     S.video.pause();
     const seg = S.segments[i];
@@ -314,6 +317,7 @@
   }
 
   function continueNext() {
+    if (!S.segments || S.current < 0 || S.current >= S.segments.length) return;
     S.mode = 'watching';
     endRange();
     const seg = S.segments[S.current];
@@ -434,9 +438,9 @@
   const handlers = {
     continue: continueNext,
     retry: () => { S.analyses.delete(S.current); enterReview(S.current); },
-    replaySegment: () => { const s = S.segments[S.current]; if (s) playRange(s.start, s.end, 1); },
+    replaySegment: () => { const s = S.segments && S.segments[S.current]; if (s) playRange(s.start, s.end, 1); },
     playSentence: (sent, rate, idx) => {
-      const seg = S.segments[S.current];
+      const seg = S.segments && S.segments[S.current];
       if (!seg) return;
       // 優先用按字數比例算出來的時間；萬一算不出來就退回整行
       const t = (S.times && S.times[idx]) || sentenceTime(seg, sent);
@@ -451,6 +455,8 @@
     },
     start,
     stop,
+    // 字幕根本沒載進來的錯誤，能做的是整個重來一次，而不是重試某一段
+    reload: () => { stop(); start(); },
     continueAnyway,
     openOptions: () => chrome.runtime.sendMessage({ type: 'openOptions' }),
     exportCsv,
