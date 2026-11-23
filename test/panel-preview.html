@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>面板預覽</title>
+<link rel="icon" href="../icons/icon32.png">
 <link rel="stylesheet" href="../content/panel.css">
 <style>
   html { background:#0f0f0f; }
@@ -14,6 +15,7 @@
 </head>
 <body>
 <div class="col"><h2>啟動前</h2><div id="c"></div></div>
+<div class="col"><h2>播放中狀態</h2><div id="w"></div></div>
 <div class="col"><h2>完成畫面</h2><div id="a"></div></div>
 <div class="col"><h2>段落複習畫面</h2><div id="b"></div></div>
 <div class="col"><h2>錯誤：字幕載入失敗</h2><div id="d"></div></div>
@@ -57,7 +59,15 @@ function renderInto(container, vm) {
   P.root = null;
 }
 
-renderInto(document.getElementById('c'), { kind:'launcher', active:false, enabled:true, total:0 });
+renderInto(document.getElementById('c'), {
+  kind:'launcher', active:false, enabled:true, total:0,
+  hasKey:true, langLabel:'法文', providerLabel:'Gemini'
+});
+
+renderInto(document.getElementById('w'), {
+  kind:'watching', enabled:true, total:15, segment:null,
+  nextStop: 62, ready: true, pending: false, waitingNotes: false
+});
 
 renderInto(document.getElementById('a'), {
   kind:'done', enabled:true, total:15, segment:null, support:true,

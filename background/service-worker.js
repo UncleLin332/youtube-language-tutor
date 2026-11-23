@@ -16,7 +16,7 @@ async function analyze(req) {
   const hit = await chrome.storage.local.get(key);
   if (hit[key]) return { data: hit[key], cached: true };
 
-  if (!req.settings.apiKey) throw new Error('還沒設定 API key。點一下工具列的擴充圖示開啟設定頁。');
+  if (!req.settings.apiKey) throw new Error('尚未設定 API key，請點右上角 ⚙ 開啟設定頁。');
   const data = await callModel(req.settings, analyzeJob(req.settings, req.segment.lines));
   try {
     await chrome.storage.local.set({ [key]: data });
@@ -37,7 +37,7 @@ async function explain(req) {
   const hit = await chrome.storage.local.get(key);
   if (hit[key]) return { data: hit[key], cached: true };
 
-  if (!req.settings.apiKey) throw new Error('還沒設定 API key。點一下工具列的擴充圖示開啟設定頁。');
+  if (!req.settings.apiKey) throw new Error('尚未設定 API key，請點右上角 ⚙ 開啟設定頁。');
   const data = await callModel(req.settings, explainJob(req.settings, req));
   try {
     await chrome.storage.local.set({ [key]: data });

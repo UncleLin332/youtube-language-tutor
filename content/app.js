@@ -508,7 +508,16 @@
   }
 
   function renderLauncher() {
-    Panel.render({ kind: 'launcher', active: false, enabled: S.enabled, total: 0 });
+    const r = S.settings ? LY.resolve(S.settings) : { apiKey: '', langName: '', provider: 'anthropic' };
+    Panel.render({
+      kind: 'launcher',
+      active: false,
+      enabled: S.enabled,
+      total: 0,
+      hasKey: !!r.apiKey,
+      langLabel: r.langName || '',
+      providerLabel: r.provider === 'gemini' ? 'Gemini' : 'Claude'
+    });
   }
 
   async function start() {
@@ -618,6 +627,11 @@
     if (area !== 'local' || !changes.settings) return;
     const old = S.settings;
     S.settings = await LY.getSettings();
+    if (!S.active && !S.cues && S.routed) {
+      S.enabled = S.settings.autoPause !== false;
+      renderLauncher();
+      return;
+    }
     if (!S.cues) return;
     if (old && old.segmentSeconds !== S.settings.segmentSeconds) {
       S.segments = LY.buildSegments(S.cues, S.settings.segmentSeconds);

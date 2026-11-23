@@ -3,180 +3,449 @@
 <head>
 <meta charset="utf-8">
 <title>Language Tutor in YouTube · 設定</title>
+<link rel="icon" href="../icons/icon32.png">
 <style>
-  :root { color-scheme: light dark; --bg:#fff; --fg:#111; --dim:#666; --line:#ddd; --card:#fafafa; --accent:#7c5cff; }
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f6f9;
+    --surface: #ffffff;
+    --subtle: #f1f1f6;
+    --fg: #141418;
+    --dim: #666674;
+    --line: #e2e2ea;
+    --accent: #7c5cff;
+    --accent-soft: rgba(124, 92, 255, 0.1);
+    --ok: #229954;
+    --err: #d64545;
+    --coffee-bg: #fff9ee;
+    --coffee-line: #f2dfb8;
+    --coffee-accent: #d97706;
+  }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#141414; --fg:#f1f1f1; --dim:#999; --line:#333; --card:#1d1d1d; }
+    :root {
+      --bg: #111114;
+      --surface: #1a1a1f;
+      --subtle: #23232a;
+      --fg: #f1f1f5;
+      --dim: #9a9aa8;
+      --line: #2d2d36;
+      --accent-soft: rgba(124, 92, 255, 0.16);
+      --coffee-bg: rgba(245, 180, 0, 0.07);
+      --coffee-line: rgba(245, 180, 0, 0.28);
+      --coffee-accent: #f5b400;
+    }
   }
-  body { background:var(--bg); color:var(--fg); font-family:"Noto Sans TC",system-ui,sans-serif;
-         margin:0; padding:40px 20px; line-height:1.6; }
-  main { max-width: 620px; margin:0 auto; }
-  h1 { font-size:20px; margin:0 0 4px; }
-  .sub { color:var(--dim); font-size:13px; margin-bottom:28px; }
-  label { display:block; font-weight:600; font-size:13px; margin-bottom:4px; }
-  .hint { color:var(--dim); font-size:12px; margin-top:4px; }
-  .row { margin-bottom:20px; }
-  input[type=text], input[type=password], input[type=number], select {
-    width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px;
-    border:1px solid var(--line); background:var(--card); color:var(--fg); font-size:14px; font-family:inherit;
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Noto Sans TC", system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 36px 16px 56px;
+    line-height: 1.6;
+    font-size: 14px;
   }
-  .two { display:flex; gap:12px; }
-  .two > div { flex:1; }
-  .provider-block[hidden] { display:none; }
-  button { border:1px solid var(--line); background:var(--card); color:var(--fg);
-           border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit; }
-  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
-  button:hover { filter:brightness(1.08); }
-  .bar { display:flex; gap:8px; align-items:center; margin-top:26px; }
-  .status { color:var(--dim); font-size:13px; }
-  .ok { color:#2a9d5c; } .err { color:#d64545; }
-  hr { border:0; border-top:1px solid var(--line); margin:30px 0; }
-  .check { display:flex; align-items:center; gap:8px; font-weight:400; }
-  .notice { border:1px solid var(--line); background:var(--card); border-radius:10px;
-            padding:14px 16px; font-size:12.5px; color:var(--dim); line-height:1.7; }
-  .notice strong { color:var(--fg); display:block; font-size:13px; margin-bottom:6px; }
-  .notice ul { margin:0; padding-left:18px; }
-  .notice li { margin:2px 0; }
-  .notice a { color:var(--accent); }
-  .kofi { display:inline-block; text-decoration:none; font-size:13px; font-weight:600;
-          color:var(--fg); background:var(--card); border:1px solid var(--line);
-          border-radius:8px; padding:8px 14px; }
-  .kofi:hover { border-color:var(--accent); color:var(--accent); }
+  main { max-width: 600px; margin: 0 auto; }
+
+  .page-head { margin-bottom: 20px; }
+  .page-head h1 { font-size: 21px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--dim); font-size: 13.5px; margin: 0; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title .badge { font-size: 12px; font-weight: 500; color: var(--dim); }
+
+  .row { margin-bottom: 14px; }
+  .row:last-child { margin-bottom: 0; }
+  .two { display: flex; gap: 12px; }
+  .two > div { flex: 1; min-width: 0; }
+  @media (max-width: 520px) { .two { flex-direction: column; } }
+
+  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .hint { color: var(--dim); font-size: 12px; margin-top: 5px; line-height: 1.5; }
+  .hint a { color: var(--accent); text-decoration: none; }
+  .hint a:hover { text-decoration: underline; }
+
+  input[type=text], input[type=password], select {
+    width: 100%;
+    padding: 9px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--subtle);
+    color: var(--fg);
+    font-size: 13.5px;
+    font-family: inherit;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+  .key-wrap { position: relative; display: flex; align-items: center; }
+  .key-wrap input { padding-right: 54px; }
+  .key-toggle {
+    position: absolute;
+    right: 6px;
+    border: 0;
+    background: transparent;
+    color: var(--dim);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .key-toggle:hover { color: var(--fg); background: var(--line); }
+
+  .provider-block[hidden], [hidden] { display: none !important; }
+
+  button {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--fg);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color .15s, filter .15s, background .15s;
+  }
+  button:hover { border-color: var(--dim); }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  button.primary:hover { filter: brightness(1.08); border-color: var(--accent); }
+  button.danger:hover { border-color: var(--err); color: var(--err); }
+  button.link-btn {
+    border: 0; background: transparent; color: var(--dim);
+    padding: 4px 2px; font-size: 12px; font-weight: 400;
+  }
+  button.link-btn:hover { color: var(--fg); text-decoration: underline; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .save-bar { margin: 4px 0 18px; }
+  .status { color: var(--dim); font-size: 13px; margin-left: 4px; }
+  .ok { color: var(--ok); font-weight: 500; }
+  .err { color: var(--err); font-weight: 500; }
+
+  /* 圖文申請教學 */
+  details.howto {
+    border: 1px solid var(--line);
+    background: var(--subtle);
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 12.5px;
+    color: var(--dim);
+    line-height: 1.65;
+  }
+  details.howto summary {
+    cursor: pointer;
+    padding: 10px 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--fg);
+    list-style: none;
+  }
+  details.howto summary::-webkit-details-marker { display: none; }
+  details.howto summary::before { content: '▸ '; color: var(--accent); }
+  details.howto[open] summary::before { content: '▾ '; }
+  details.howto[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+  details.howto ol { margin: 0 0 12px; padding-left: 18px; }
+  details.howto li { margin: 6px 0; }
+  details.howto li b { color: var(--fg); }
+  details.howto a { color: var(--accent); }
+  details.howto code {
+    font-size: 11.5px;
+    background: var(--surface);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+  }
+  details.howto li.step-active {
+    background: var(--accent-soft);
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    color: var(--fg);
+  }
+  .guide-player {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #111116;
+    margin: 4px 0 12px;
+  }
+  .guide-stage img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 920 / 480;
+    object-fit: cover;
+  }
+  .guide-progress { height: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+  .guide-fill { height: 100%; width: 0%; background: var(--accent); transition: width .2s linear; }
+  .guide-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px; background: var(--surface);
+    border-top: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .guide-bar button { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+  .guide-bar button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .guide-count { margin-left: auto; font-size: 11.5px; color: var(--dim); }
+
+  /* 河童咖啡贊助卡 */
+  .coffee-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--coffee-bg);
+    border: 1px solid var(--coffee-line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-top: 18px;
+  }
+  .coffee-avatar {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    flex: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .coffee-body { flex: 1; min-width: 0; }
+  .coffee-title { font-size: 14.5px; font-weight: 700; margin: 0 0 3px; }
+  .coffee-desc { font-size: 12.5px; color: var(--dim); margin: 0 0 10px; line-height: 1.5; }
+  .coffee-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--coffee-accent);
+    border-radius: 999px;
+    padding: 6px 14px;
+    transition: filter .15s, transform .15s;
+  }
+  .coffee-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  @media (max-width: 480px) {
+    .coffee-card { flex-direction: column; text-align: center; }
+  }
+
+  /* 輕量化個資說明（點擊才展開） */
+  .privacy-details {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .privacy-details summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    list-style: none;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--dim);
+    transition: border-color .15s, color .15s;
+  }
+  .privacy-details summary::-webkit-details-marker { display: none; }
+  .privacy-details summary:hover { border-color: var(--accent); color: var(--fg); }
+  .privacy-box {
+    margin-top: 10px;
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    line-height: 1.65;
+  }
+  .privacy-box ul { margin: 0; padding-left: 18px; }
+  .privacy-box li { margin: 4px 0; }
+  .privacy-box b { color: var(--fg); }
+  .privacy-box a { color: var(--accent); }
+  .privacy-box code { font-size: 11px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Language Tutor in YouTube</h1>
-  <div class="sub">影片每播放一段就自動暫停，整理單字片語，再帶你一句一句複習。</div>
-
-  <div class="row">
-    <label for="provider">AI 供應商</label>
-    <select id="provider">
-      <option value="anthropic">Claude（Anthropic）</option>
-      <option value="gemini">Gemini（Google）</option>
-    </select>
+  <div class="page-head">
+    <h1>Language Tutor in YouTube</h1>
+    <p class="sub">看 YouTube 時每 30 秒自動暫停，整理單字片語並帶你逐句複習。</p>
   </div>
 
-  <div class="row two provider-block" data-provider="anthropic">
-    <div>
-      <label for="anthropicKey">Anthropic API key</label>
-      <input id="anthropicKey" type="password" placeholder="sk-ant-..." autocomplete="off">
-      <div class="hint">到 console.anthropic.com 申請。</div>
-    </div>
-    <div>
-      <label for="anthropicModel">模型</label>
-      <select id="anthropicModel">
-        <option value="claude-opus-5-5">Claude Opus 5.5（品質最好）</option>
-        <option value="claude-sonnet-5-5">Claude Sonnet 5.5（較便宜）</option>
-        <option value="claude-haiku-5-5">Claude Haiku 5.5（最便宜・最快）</option>
+  <!-- 1. AI 連線設定 -->
+  <section class="card">
+    <h2 class="card-title">AI 連線設定</h2>
+
+    <div class="row">
+      <label for="provider">AI 供應商</label>
+      <select id="provider">
+        <option value="gemini">Gemini（Google）</option>
+        <option value="anthropic">Claude（Anthropic）</option>
       </select>
     </div>
-  </div>
 
-  <div class="row two provider-block" data-provider="gemini">
-    <div>
-      <label for="geminiKey">Gemini API key</label>
-      <input id="geminiKey" type="password" placeholder="AIza..." autocomplete="off">
-      <div class="hint">到 aistudio.google.com 申請。</div>
+    <div class="row two provider-block" data-provider="anthropic">
+      <div>
+        <label for="anthropicKey">Anthropic API Key</label>
+        <div class="key-wrap">
+          <input id="anthropicKey" type="password" placeholder="sk-ant-..." autocomplete="off">
+          <button type="button" class="key-toggle" data-target="anthropicKey">顯示</button>
+        </div>
+        <div class="hint">前往 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a> 取得金鑰</div>
+      </div>
+      <div>
+        <label for="anthropicModel">模型</label>
+        <select id="anthropicModel">
+          <option value="claude-opus-5-5">Claude Opus 5.5（品質最高）</option>
+          <option value="claude-sonnet-5-5">Claude Sonnet 5.5（均衡推薦）</option>
+          <option value="claude-haiku-5-5">Claude Haiku 5.5（最快・最省）</option>
+        </select>
+      </div>
     </div>
-    <div>
-      <label for="geminiModel">模型</label>
-      <select id="geminiModel">
-        <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite（預設・最快最便宜）</option>
-        <option value="gemini-3.8-flash">Gemini 3.8 Flash（穩定版）</option>
-        <option value="gemini-4-hydrogen">Gemini 4 Hydrogen（最新・最貴）</option>
-      </select>
-    </div>
-  </div>
 
-  <div class="row">
-    <div class="notice">
-      <strong>你的資料會去哪裡</strong>
-      <ul>
-        <li><b>會送出：</b>你在某支影片上按下「開始學習這部影片」之後，<b>該影片的字幕文字、影片標題與網址</b>
-            會送到你上面選的 AI 供應商（Anthropic 或 Google），用來整理單字、翻譯與解說。
-            沒按之前不會抓字幕，也不會發出任何請求。</li>
-        <li><b>不會送出：</b>API key 只存在這台電腦的瀏覽器裡（<code>chrome.storage.local</code>），
-            只會放進送往該供應商的請求標頭。請求由你的瀏覽器直接送出，<b>不經過本擴充作者的伺服器</b>，
-            作者收不到你的 key、字幕或任何使用紀錄。</li>
-        <li><b>存在本機：</b>生字本、設定與分析結果的快取都只留在這台電腦，不會同步到雲端。</li>
-        <li>你送出的內容如何被使用，依你選的供應商的條款而定：
-            <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noreferrer">Anthropic</a> ·
-            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a>。
-            本擴充的隱私權政策：
-            <a href="https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md"
-               target="_blank" rel="noreferrer">PRIVACY.md</a></li>
-      </ul>
+    <div class="row two provider-block" data-provider="gemini">
+      <div>
+        <label for="geminiKey">Gemini API Key</label>
+        <div class="key-wrap">
+          <input id="geminiKey" type="password" placeholder="AIza..." autocomplete="off">
+          <button type="button" class="key-toggle" data-target="geminiKey">顯示</button>
+        </div>
+        <div class="hint">前往 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">aistudio.google.com</a> 免費申請</div>
+      </div>
+      <div>
+        <label for="geminiModel">模型</label>
+        <select id="geminiModel">
+          <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite（預設・省費）</option>
+          <option value="gemini-3.8-flash">Gemini 3.8 Flash（均衡穩定）</option>
+          <option value="gemini-4-hydrogen">Gemini 4 Hydrogen（最新・較貴）</option>
+        </select>
+      </div>
     </div>
-  </div>
 
-  <div class="row two">
-    <div>
-      <label for="targetLang">學習語言</label>
+    <details class="howto provider-block" data-provider="anthropic">
+      <summary>第一次用？Anthropic（Claude）API Key 圖文申請教學</summary>
+      <div class="guide-player" data-guide="anthropic">
+        <div class="guide-stage">
+          <img src="guides/anthropic-1.png" alt="Anthropic API Key 申請步驟圖解">
+          <div class="guide-progress"><div class="guide-fill"></div></div>
+        </div>
+        <div class="guide-bar">
+          <button type="button" class="guide-play">⏸ 暫停</button>
+          <button type="button" class="guide-step active" data-step="0">1. 儲值</button>
+          <button type="button" class="guide-step" data-step="1">2. 建金鑰</button>
+          <button type="button" class="guide-step" data-step="2">3. 複製</button>
+          <button type="button" class="guide-step" data-step="3">4. 貼回測試</button>
+          <span class="guide-count">步驟 1 / 4</span>
+        </div>
+      </div>
+      <ol>
+        <li><b>先儲值</b>：登入 <a href="https://console.anthropic.com" target="_blank" rel="noreferrer">console.anthropic.com</a>（與 Claude Pro 月費分開計費），點左側 <b>Billing → Buy credits</b> 購買額度（無免費額度，未儲值會回 <code>credit balance is too low</code>）。</li>
+        <li><b>建立金鑰</b>：切到左側 <b>API keys → Create Key</b>，隨意取個名稱（例如 <code>youtube-tutor</code>）。</li>
+        <li><b>立刻複製</b>：<code>sk-ant-</code> 開頭的金鑰僅顯示這一次，請當場按 <b>Copy Key</b>（關閉後無法再看）。</li>
+        <li><b>貼回測試</b>：貼到上方欄位後按「儲存設定」→「測試 API key」。建議在 Billing 設定每月用量上限。</li>
+      </ol>
+    </details>
+
+    <details class="howto provider-block" data-provider="gemini">
+      <summary>第一次用？Gemini（Google）API Key 圖文申請教學</summary>
+      <div class="guide-player" data-guide="gemini">
+        <div class="guide-stage">
+          <img src="guides/gemini-1.png" alt="Gemini API Key 申請步驟圖解">
+          <div class="guide-progress"><div class="guide-fill"></div></div>
+        </div>
+        <div class="guide-bar">
+          <button type="button" class="guide-play">⏸ 暫停</button>
+          <button type="button" class="guide-step active" data-step="0">1. 開啟頁面</button>
+          <button type="button" class="guide-step" data-step="1">2. 建新專案</button>
+          <button type="button" class="guide-step" data-step="2">3. 複製金鑰</button>
+          <button type="button" class="guide-step" data-step="3">4. 貼回測試</button>
+          <span class="guide-count">步驟 1 / 4</span>
+        </div>
+      </div>
+      <ol>
+        <li><b>開啟 AI Studio</b>：使用 Google 帳號登入 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">aistudio.google.com/apikey</a>，點擊右上角 <b>Create API key</b>。</li>
+        <li><b>建立新專案</b>：選擇 <b>Create API key in new project</b>，免手動設定 Google Cloud。</li>
+        <li><b>複製金鑰</b>：複製 <code>AIza</code> 開頭的金鑰（免綁信用卡即可使用免費額度；遇 <code>429</code> 稍候再試即可）。</li>
+        <li><b>貼回測試</b>：貼到上方欄位後按「儲存設定」→「測試 API key」。若在意免費版內容可能用於改善產品，可於專案啟用付費（詳見 <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noreferrer">Gemini API 條款</a>）。</li>
+      </ol>
+    </details>
+  </section>
+
+  <!-- 2. 學習語言 -->
+  <section class="card">
+    <h2 class="card-title">學習語言</h2>
+    <div class="row">
+      <label for="targetLang">想透過 YouTube 學習的語言</label>
       <select id="targetLang"></select>
+      <div class="hint">每 30 秒自動暫停於句尾（可在影片面板切換連續播放）；分析結果會快取於本機，不重複消耗 API。</div>
     </div>
-    <div>
-      <label for="nativeLang">解釋用語言</label>
-      <input id="nativeLang" type="text" placeholder="繁體中文">
-    </div>
-  </div>
+  </section>
 
-  <div class="row two">
-    <div>
-      <label for="segmentSeconds">每段長度（秒）</label>
-      <input id="segmentSeconds" type="number" min="10" max="180" step="5">
-      <div class="hint">實際會延到最近的句尾才停。</div>
-    </div>
-    <div>
-      <div class="hint" style="margin-top:28px">分析結果會以「影片＋模型＋段落」為鍵快取，同一段不會重複付費。</div>
-    </div>
-  </div>
-
-  <div class="row">
-    <label for="exportFormat">Anki 檔的格式</label>
-    <select id="exportFormat">
-      <option value="simple">精簡：法文＋中文兩欄（不用設定，直接匯入）</option>
-      <option value="fields">分欄：例句、筆記、詞性各自一欄（要先建筆記類型）</option>
-    </select>
-    <div class="hint">精簡版用 Anki 內建的 Basic 就能匯入。分欄版可以在 Anki 自己排版卡片，
-      但要先建一個叫 <code>YouTube 語言學習</code> 的筆記類型（步驟見 README）。<br>
-      「📊 表格」按鈕不受這裡影響，一律匯出給人看的詳細表格。</div>
-  </div>
-
-  <div class="row">
-    <label class="check"><input id="autoPause" type="checkbox"> 預設開啟自動暫停</label>
-    <label class="check" style="margin-top:8px"><input id="autoStart" type="checkbox"> 自動在每支影片啟動</label>
-    <div class="hint">不勾的話，每支影片都要自己按一次「開始學習」（或點工具列圖示）。
-      勾了之後每支有字幕的影片都會自動開始，也就會自動花 API 費用。</div>
-  </div>
-
-  <div class="bar">
-    <button class="primary" id="save">儲存</button>
+  <!-- 主要儲存列 -->
+  <div class="bar save-bar">
+    <button class="primary" id="save">儲存設定</button>
     <button id="test">測試 API key</button>
     <span class="status" id="status"></span>
   </div>
 
-  <hr>
+  <!-- 3. 生字本 -->
+  <section class="card">
+    <h2 class="card-title">
+      <span>生字本</span>
+      <span class="badge" id="bookCount">載入中…</span>
+    </h2>
+    <div class="bar" id="bookActions">
+      <button id="exportBook">匯出 Anki CSV</button>
+      <button id="exportBookExcel">匯出詳細表格</button>
+      <button class="danger" id="clearBook">清空生字本</button>
+    </div>
+    <div class="hint" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
+      <span class="status" id="status2" style="margin-left:0">Anki 檔為原文＋翻譯兩欄，可直接匯入內建 Basic 牌組。</span>
+      <button type="button" class="link-btn" id="clearCache">清除分析快取</button>
+    </div>
+  </section>
 
-  <h1 style="font-size:16px">生字本</h1>
-  <div class="sub" id="bookCount">載入中…</div>
-  <div class="bar" style="margin-top:0">
-    <button id="exportBook">匯出 Anki CSV</button>
-    <button id="clearBook">清空生字本</button>
-    <button id="clearCache">清除分析快取</button>
-    <span class="status" id="status2"></span>
+  <!-- 4. 請河童喝杯咖啡（贊助卡片） -->
+  <!-- 贊助連結：刻意不用 Ko-fi 官方圖片按鈕，避免未點擊就發起對外連線。 -->
+  <div class="coffee-card">
+    <img class="coffee-avatar" src="kappa-coffee.png" alt="拿著咖啡的河童">
+    <div class="coffee-body">
+      <div class="coffee-title">請河童喝杯咖啡 ☕</div>
+      <p class="coffee-desc">這個擴充免費、無廣告、不收集你的任何資料。如果它曾幫你聽懂一段外語影片，歡迎請河童喝杯咖啡，支持我們推進開發！</p>
+      <a class="coffee-btn" href="https://ko-fi.com/kappa46122" target="_blank" rel="noopener noreferrer">請河童喝杯咖啡 →</a>
+    </div>
   </div>
 
-  <hr>
-
-  <!-- 贊助連結。刻意不用 Ko-fi 官方那顆圖片按鈕：那張圖掛在 storage.ko-fi.com，
-       每次打開設定頁都會對外發一次請求，等於讓 Ko-fi 知道你的 IP 和你裝了這個擴充。
-       隱私權政策寫的是「不會以任何形式把資料傳送給作者或任何第三方」，
-       所以這裡只放純連結，按下去才會連出去。 -->
-  <div class="row">
-    <a class="kofi" href="https://ko-fi.com/kappa46122" target="_blank" rel="noopener noreferrer">☕ 請河童喝杯咖啡</a>
-    <div class="hint">如果對你有幫助的話</div>
-  </div>
+  <!-- 5. 輕量個資說明按鈕 -->
+  <details class="privacy-details">
+    <summary>🔒 了解更多個資與隱私說明</summary>
+    <div class="privacy-box">
+      <ul>
+        <li><b>僅在啟動後傳送</b>：只有在你主動點擊「開始學習」後，才會將該影片的字幕、標題與網址直接傳送至你選用的 AI 供應商（Anthropic 或 Google）。</li>
+        <li><b>不經過第三方伺服器</b>：API Key、生字本與快取只存在你的瀏覽器本機（<code>chrome.storage.local</code>），開發者收不到任何資料。</li>
+        <li><b>相關條款</b>：<a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noreferrer">Anthropic 隱私權</a> · <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google 隱私權</a> · <a href="https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md" target="_blank" rel="noreferrer">本擴充隱私權政策（PRIVACY.md）</a></li>
+      </ul>
+    </div>
+  </details>
 </main>
 <script src="../shared/anki.js"></script>
 <script src="options.js"></script>

@@ -216,14 +216,14 @@ function apiError(txt, status, provider) {
     msg = (j.error && j.error.message) || txt;
   } catch (e) { /* 原文就好 */ }
   const retry = RETRYABLE.has(status);
-  if (status === 401 || status === 403) return new ApiError('API key 無效或沒有權限，請到擴充設定頁重新填寫。', status, false);
-  if (status === 404 && provider === 'gemini') return new ApiError(`找不到模型「${msg}」。到設定頁換一個模型試試。`, status, false);
-  if (status === 429) return new ApiError(`超過速率限制。（${String(msg).slice(0, 200)}）`, status, true);
+  if (status === 401 || status === 403) return new ApiError('API key 無效或權限不足，請至設定頁確認。', status, false);
+  if (status === 404 && provider === 'gemini') return new ApiError(`找不到模型「${msg}」，請至設定頁切換其他模型。`, status, false);
+  if (status === 429) return new ApiError(`已達 API 速率上限，請稍後再試。（${String(msg).slice(0, 160)}）`, status, true);
   if (status === 503 || status === 529) {
     // 保留原文：哪一個模型在忙、是不是真的負載問題，都要靠它判斷
-    return new ApiError(`這個模型現在負載過高，可以換一個模型或等一下再試。（${String(msg).slice(0, 200)}）`, status, true);
+    return new ApiError(`目前模型負載過高，建議稍後再試或切換模型。（${String(msg).slice(0, 160)}）`, status, true);
   }
-  return new ApiError(`API 錯誤 ${status}：${String(msg).slice(0, 300)}`, status, retry);
+  return new ApiError(`API 錯誤 ${status}：${String(msg).slice(0, 260)}`, status, retry);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Language Tutor in YouTube",
-  "version": "1.0.0",
-  "description": "每隔一段時間自動暫停 YouTube 影片，整理該段的單字與片語，並帶你一句一句複習。",
+  "version": "1.1.0",
+  "description": "觀看 YouTube 時自動分段暫停，整理單字與片語並帶你逐句複習。",
   "homepage_url": "https://github.com/UncleLin332/youtube-language-tutor",
   "icons": {
     "16": "icons/icon16.png",
@@ -23,7 +23,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Language Tutor in YouTube（在影片頁點一下開關）",
+    "default_title": "Language Tutor in YouTube（點擊開啟或前往設定）",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

@@ -1,118 +1,106 @@
 #!/usr/bin/env python3
-"""商店的宣傳圖：440x560 的小圖塊與 1400x560 的跑馬燈圖塊。
+"""商店的宣傳圖：440x280 的小圖塊與 1400x560 的跑馬燈圖塊。
 
     python3 store/make-promo.py
 
 需要 Pillow。輸出 store/promo-440x280.png 與 store/promo-1400x560.png。
 
-純排版，不經過生圖模型——生成的圖會在畫面裡寫出不存在的單字。
-（試過一次，字幕那行變成「I active subtitles n active suitoos.」）
+結合 Nano Banana 生成的吉祥物背景圖（store/promo-mascot-bg.png）與演算法排版的銳利文字，
+避免生圖模型直接寫字產生錯字或糊邊。
 
-兩個刻意的設計：
-
-1. **字級用演算法套出來，不是寫死的。** 第一版寫死 34px，標題右邊直接被切掉。
-   現在是從大往小試到塞得下為止，所以改字、換尺寸都不會爆版。
-2. **所有尺寸都按畫面高度換算**，所以同一份程式碼能出兩種比例，
-   而且兩張看起來是同一套東西。
-
-跑馬燈那張商店要求 JPEG 或 24 位元 PNG、不能有 alpha 透明層。底圖用 RGB 模式建，
-河童貼上去時用它自己的 alpha 當遮罩，貼完就沒有透明層了。
+跑馬燈那張商店規定 JPEG 或 24 位元 PNG、不能有 alpha 透明層，因此全程以 RGB 模式輸出。
 """
 from PIL import Image, ImageDraw, ImageFont
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ICON_SRC = ROOT / 'store' / 'icon-source-2000.png'
+BG_SRC = ROOT / 'store' / 'promo-mascot-bg.png'
 
-BG, FG, DIM = (13, 42, 56), (255, 255, 255), (138, 196, 212)
+FG = (255, 255, 255)
+DIM = (214, 216, 234)
+ACCENT = (124, 92, 255)
+
 EN_PATH = '/System/Library/Fonts/Avenir Next.ttc'
 EN_INDEX = 2                      # Demi Bold
-CJK_PATH = '/System/Library/Fonts/Hiragino Sans GB.ttc'
+CJK_PATH = '/System/Library/Fonts/STHeiti Medium.ttc'
+CJK_INDEX = 0                     # Heiti TC Medium
 
 TITLE = ['Language Tutor', 'in YouTube']
-TAG = '自動暫停・整理單字・匯出 Anki'
+TAG = '自動暫停 · 整理單字 · 匯出 Anki'
 
 SIZES = [(440, 280), (1400, 560)]
-SS = 3                            # 先畫大的再縮，邊緣才銳利
-
-
-def load_icon():
-    """河童，四角去背。原圖的圓角外面是白的，不是透明的。"""
-    im = Image.open(ICON_SRC).convert('RGBA')
-    w, h = im.size
-    rgb = im.convert('RGB')
-    MARK = (255, 0, 255)
-    for c in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]:
-        ImageDraw.floodfill(rgb, c, MARK, thresh=70)
-    a = Image.new('L', (w, h), 255)
-    px, ap = rgb.load(), a.load()
-    for y in range(h):
-        for x in range(w):
-            if px[x, y] == MARK:
-                ap[x, y] = 0
-    im.putalpha(a)
-    return im
+SS = 3                            # 先畫大圖再縮，邊緣更銳利
 
 
 def fit(path, lines, max_w, start, index=0):
-    """最大的、每一行都塞得下的字級。"""
+    """找出所有行都放得下的最大字級。"""
     size = start
     while size > 8:
         f = ImageFont.truetype(path, size, index=index)
         if all(f.getbbox(t)[2] - f.getbbox(t)[0] <= max_w for t in lines):
             return f, size
         size -= 1
-    raise SystemExit('塞不下')
+    raise SystemExit('文字過長，無法放入版面')
 
 
-def width_of(font, text):
-    b = font.getbbox(text)
-    return b[2] - b[0]
+def make_canvas(bg_src, W, H):
+    """把 16:9 的吉祥物背景圖無縫鋪進目標畫布，右側保留吉祥物，左側延伸純淨深色底。"""
+    scale_w = round(H * bg_src.width / bg_src.height)
+    bg = bg_src.resize((scale_w, H), Image.LANCZOS)
+
+    im = Image.new('RGB', (W, H), bg.getpixel((0, H // 2)))
+    if scale_w >= W:
+        # 440x280：從左側裁掉多餘暗部，讓吉祥物落在右側且保留適當呼吸空間
+        crop_x = scale_w - W
+        im.paste(bg.crop((crop_x, 0, scale_w, H)), (0, 0))
+    else:
+        # 1400x560：背景貼齊右緣（圖本身右側已有留白），左側用最左欄像素無縫延伸
+        paste_x = W - scale_w
+        edge_strip = bg.crop((0, 0, 1, H)).resize((paste_x + 1, H), Image.NEAREST)
+        im.paste(edge_strip, (0, 0))
+        im.paste(bg, (paste_x, 0))
+    return im
 
 
-def render(icon, out_w, out_h):
+def render(bg_src, out_w, out_h):
     W, H = out_w * SS, out_h * SS
-    pad = round(H * 0.08)
-    side = round(H * 0.54)
-    gap = round(H * 0.07)
-
-    # 先用最寬的可能空間量字，再回頭把整組置中
-    avail = W - pad * 2 - side - gap
-    title_f, title_px = fit(EN_PATH, TITLE, avail, round(H * 0.143), index=EN_INDEX)
-    tag_f, _ = fit(CJK_PATH, [TAG], avail, round(H * 0.061))
-
-    text_w = max(max(width_of(title_f, t) for t in TITLE), width_of(tag_f, TAG))
-    group_w = side + gap + text_w
-    x0 = (W - group_w) // 2
-
-    im = Image.new('RGB', (W, H), BG)          # RGB，不是 RGBA：輸出不能有 alpha
+    im = make_canvas(bg_src, W, H)
     d = ImageDraw.Draw(im)
 
-    ic = icon.resize((side, side), Image.LANCZOS)
-    im.paste(ic, (x0, (H - side) // 2), ic)    # 用 icon 自己的 alpha 當遮罩
+    wide = (out_w / out_h) >= 2
+    tx = round(W * (0.08 if wide else 0.07))
+    avail = round(W * (0.45 if wide else 0.37))
 
-    tx = x0 + side + gap
-    line_h = round(title_px * 1.18)
-    rule = round(title_px * 0.45)
-    tag_h = tag_f.getbbox(TAG)[3]
-    block = line_h * len(TITLE) + rule * 2 + tag_h
-    y = (H - block) // 2
+    title_f, title_px = fit(EN_PATH, TITLE, avail, round(H * 0.16), index=EN_INDEX)
+    tag_f, _ = fit(CJK_PATH, [TAG], avail, round(H * 0.068), index=CJK_INDEX)
+
+    line_h = round(title_px * 1.16)
+    gap_top = round(title_px * 0.38)
+    bar_h = max(4, round(H * 0.016))
+    bar_w = round(H * 0.16)
+    gap_bot = round(title_px * 0.36)
+    tag_box = tag_f.getbbox(TAG)
+    tag_h = tag_box[3] - tag_box[1]
+
+    block = line_h * len(TITLE) + gap_top + bar_h + gap_bot + tag_h
+    y = (H - block) // 2 - round(H * 0.02)
 
     for t in TITLE:
         d.text((tx, y), t, font=title_f, fill=FG)
         y += line_h
-    y += rule
-    d.line([(tx, y), (tx + round(H * 0.12), y)], fill=DIM, width=max(2, SS))
-    y += rule
+
+    y += gap_top
+    d.rounded_rectangle([(tx, y), (tx + bar_w, y + bar_h)], radius=bar_h // 2, fill=ACCENT)
+    y += bar_h + gap_bot
     d.text((tx, y), TAG, font=tag_f, fill=DIM)
 
     return im.resize((out_w, out_h), Image.LANCZOS)
 
 
-icon = load_icon()
+bg_src = Image.open(BG_SRC).convert('RGB')
 for w, h in SIZES:
     out = ROOT / 'store' / f'promo-{w}x{h}.png'
-    im = render(icon, w, h)
+    im = render(bg_src, w, h)
     assert im.mode == 'RGB', '不能有 alpha 透明層'
     im.save(out, optimize=True)
     print(f'  {out.relative_to(ROOT)}  {w}x{h}  {im.mode}  {out.stat().st_size // 1024}KB')

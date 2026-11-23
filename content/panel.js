@@ -16,10 +16,10 @@
   // 注意：視窗變窄、劇院模式、全螢幕時，YouTube 會把 #secondary 設成 display:none，
   // 但元素還留在 DOM 裡。只檢查「存在」會讓面板掛進一個看不見的容器裡人間蒸發，
   // 所以這裡要檢查它真的有被算進版面。
-  function usable(el) {
-    if (!el) return false;
-    if (el.offsetParent === null) return false;
-    return el.getBoundingClientRect().width > 80;
+  function usable(node) {
+    if (!node) return false;
+    if (node.offsetParent === null) return false;
+    return node.getBoundingClientRect().width > 80;
   }
 
   function host() {
@@ -78,60 +78,71 @@
   };
 
   function headerRow(vm) {
-    const title = el('span', { class: 'ly-brand', text: '語言學習助手' });
+    const title = el('span', { class: 'ly-brand', text: '語言助手' });
     const seg = el('span', {
       class: 'ly-segname',
       text: vm.segment
-        ? `第 ${vm.segment.index + 1}/${vm.total} 段 · ${LY.fmtTime(vm.segment.start)}–${LY.fmtTime(vm.segment.end)}`
+        ? `${vm.segment.index + 1}/${vm.total} · ${LY.fmtTime(vm.segment.start)}–${LY.fmtTime(vm.segment.end)}`
         : (vm.total ? `共 ${vm.total} 段` : '')
     });
     const spacer = el('span', { class: 'ly-spacer' });
     const running = vm.kind !== 'launcher';
     const pauseBtn = running ? el('button', {
       class: 'ly-icon' + (vm.enabled ? ' on' : ''),
-      title: vm.enabled ? '自動暫停：開（點擊關閉）' : '自動暫停：關（點擊開啟）',
-      text: vm.enabled ? '⏸ 自動' : '▷ 連續',
+      title: vm.enabled ? '每段自動暫停：開（點此改為連續播放）' : '每段自動暫停：關（點此開啟自動暫停）',
+      text: vm.enabled ? '⏸ 自動停' : '▶ 連續播',
       onclick: () => P.on.toggleEnabled && P.on.toggleEnabled()
     }) : null;
     const stopBtn = running ? el('button', {
-      class: 'ly-icon', title: '結束這部影片的學習模式', text: '⏹',
+      class: 'ly-icon', title: '結束這部影片的學習', text: '⏹',
       onclick: () => P.on.stop && P.on.stop()
     }) : null;
     const gear = el('button', {
-      class: 'ly-icon', title: '設定', text: '⚙',
+      class: 'ly-icon', title: '開啟設定', text: '⚙',
       onclick: () => P.on.openOptions && P.on.openOptions()
     });
+    const collapsed = P.root && P.root.classList.contains('ly-collapsed');
     const fold = el('button', {
-      class: 'ly-icon', title: '收合', text: '–',
-      onclick: () => P.root.classList.toggle('ly-collapsed')
+      class: 'ly-icon',
+      title: collapsed ? '展開面板' : '收合面板',
+      text: collapsed ? '▸' : '▾',
+      onclick: () => {
+        const isCollapsed = P.root.classList.toggle('ly-collapsed');
+        fold.textContent = isCollapsed ? '▸' : '▾';
+        fold.title = isCollapsed ? '展開面板' : '收合面板';
+      }
     });
     return [title, seg, spacer, pauseBtn, stopBtn, gear, fold];
   }
 
   function toggles() {
-    const mk = (label, key, title) => {
-      const b = el('button', {
-        class: 'ly-chip' + (P.opts[key] ? ' on' : ''), text: label, title,
-        onclick: () => { P.opts[key] = !P.opts[key]; P.render(P.last); }
-      });
-      return b;
-    };
-    return el('div', { class: 'ly-chips' }, [
-      mk('顯示翻譯', 'showZh', '隱藏後點句子即可單獨顯示'),
-      mk('聽寫模式', 'dictation', '先蓋住原文，只靠聽力，點一下再揭曉')
+    const mk = (label, key, title) => el('button', {
+      class: 'ly-chip' + (P.opts[key] ? ' on' : ''), text: label, title,
+      onclick: () => { P.opts[key] = !P.opts[key]; P.render(P.last); }
+    });
+    const chips = el('div', { class: 'ly-chips' }, [
+      mk('顯示翻譯', 'showZh', '隱藏後可練習聽力，點擊句子即可單獨顯示'),
+      mk('聽寫模式', 'dictation', '先遮住原文只靠聽力，點擊句子再揭曉')
     ]);
+    if (!P.opts.showZh || P.opts.dictation) {
+      return el('div', {}, [
+        chips,
+        el('div', { class: 'ly-mode-hint', text: '提示：點擊模糊的句子即可揭曉並播放' })
+      ]);
+    }
+    return chips;
   }
 
   // 隨時可以匯出目前收藏的，不必等整部影片看完（常常是分好幾次看的）。
   // 兩顆按鈕是兩種用途：表格給人看（Excel），Anki 檔給機器吃。
   function exportRow(scope) {
     const label = el('span', { class: 'ly-export-label' });
-    const excel = el('button', { class: 'ly-mini', text: '📊 表格', title: '詳細欄位，用 Excel 或 Numbers 開' });
-    const anki = el('button', { class: 'ly-mini', text: '★ Anki', title: '法文＋中文兩欄，用 Anki 內建的 Basic 直接匯入' });
+    const excel = el('button', { class: 'ly-mini', text: '↓ 表格', title: '匯出詳細欄位表格，可用 Excel 或 Numbers 開啟' });
+    const anki = el('button', { class: 'ly-mini', text: '↓ Anki', title: '原文＋翻譯兩欄，可直接匯入 Anki' });
 
     P.syncExportBtn = () => {
       const n = P.on.starredCount ? P.on.starredCount() : 0;
-      label.textContent = n ? `收藏了 ${n} 個` : '還沒有收藏';
+      label.textContent = n ? `已收藏 ${n} 項` : '尚未收藏';
       for (const b of [excel, anki]) b.classList.toggle('ly-disabled', !n);
     };
     const go = (format) => () => {
@@ -146,7 +157,7 @@
 
   // ---------- 框選句子的一小段 ----------
   // 句子太長時常常只想記住其中一個子句，或是只有某個結構看不懂。
-  // 在法文那一行拉出選取，就跳出「解說 / 收藏」。
+  // 在原文那一行拉出選取，就跳出「解說 / 收藏」。
   let selTool = null;
 
   function hideSelTool() {
@@ -160,7 +171,7 @@
     const text = String(sel).trim();
     if (text.length < 2) return null;
 
-    // 只認法文那一行的選取：中文翻譯或單字卡不需要這個功能
+    // 只認原文那一行的選取：中文翻譯或單字卡不需要這個功能
     let node = sel.anchorNode;
     if (node && node.nodeType === 3) node = node.parentNode;
     const fr = node && node.closest && node.closest('.ly-fr');
@@ -184,11 +195,11 @@
     if (!info) return;
 
     const explain = el('button', { class: 'ly-mini', text: '💡 解說' });
-    const save = el('button', { class: 'ly-mini', text: '★ 收藏這段' });
+    const save = el('button', { class: 'ly-mini', text: '★ 收藏' });
     selTool = el('div', { class: 'ly-seltool' }, [explain, save]);
 
     const base = P.root.getBoundingClientRect();
-    selTool.style.left = Math.max(4, Math.min(info.rect.left - base.left, base.width - 160)) + 'px';
+    selTool.style.left = Math.max(4, Math.min(info.rect.left - base.left, base.width - 140)) + 'px';
     selTool.style.top = (info.rect.bottom - base.top + 6) + 'px';
     P.root.appendChild(selTool);
 
@@ -215,7 +226,7 @@
     ]);
 
     if (state.loading) {
-      box.appendChild(el('div', { class: 'ly-msg' }, [el('span', { class: 'ly-spin' }), '解說中…']));
+      box.appendChild(el('div', { class: 'ly-msg' }, [el('span', { class: 'ly-spin' }), '正在解說…']));
     } else if (state.error) {
       box.appendChild(el('div', { class: 'ly-msg ly-err', text: state.error }));
     } else {
@@ -229,7 +240,7 @@
       box.appendChild(el('div', { class: 'ly-ex-foot' }, [
         starBtn({ type: 'fragment', word: info.text, meaning: d.meaning || '',
                   lemma: '', pos: '', note: d.note || '' }),
-        el('button', { class: 'ly-mini', text: '收起', onclick: () => box.remove() })
+        el('button', { class: 'ly-mini', text: '關閉', onclick: () => box.remove() })
       ]));
     }
     info.li.insertAdjacentElement('afterend', box);
@@ -242,13 +253,13 @@
     const b = el('button', {
       class: 'ly-mini ly-star' + (extraClass ? ' ' + extraClass : '') + (on ? ' saved' : ''),
       text: '★',
-      title: on ? '已收藏，點一下取消' : '加入生字本'
+      title: on ? '已收藏，點擊取消' : '加入生字本'
     });
     b.addEventListener('click', (e) => {
       e.stopPropagation();
       const next = !b.classList.contains('saved');
       b.classList.toggle('saved', next);
-      b.title = next ? '已收藏，點一下取消' : '加入生字本';
+      b.title = next ? '已收藏，點擊取消' : '加入生字本';
       if (P.on.toggleStar) P.on.toggleStar(item, next);
       if (P.syncExportBtn) P.syncExportBtn();
     });
@@ -264,7 +275,7 @@
       const tools = el('div', { class: 'ly-sent-tools' }, [
         el('button', { class: 'ly-mini', text: '▶', title: '播放這一句',
           onclick: (e) => { e.stopPropagation(); P.on.playSentence && P.on.playSentence(s, 1, i); } }),
-        el('button', { class: 'ly-mini', text: '0.75×', title: '放慢跟讀',
+        el('button', { class: 'ly-mini', text: '0.75×', title: '慢速跟讀（0.75×）',
           onclick: (e) => { e.stopPropagation(); P.on.playSentence && P.on.playSentence(s, 0.75, i); } })
       ]);
       // 星號放在 tools 之外：tools 平常是透明的（hover 才顯示），
@@ -342,47 +353,56 @@
     P.foot.classList.remove('ly-foot-wrap');
 
     if (vm.kind === 'launcher') {
+      const tag = [vm.langLabel, vm.providerLabel].filter(Boolean).join(' · ');
+      const needKey = vm.hasKey === false;
       P.body.appendChild(el('div', { class: 'ly-launch' }, [
-        el('div', { class: 'ly-launch-title', text: '要用這部影片學語言嗎？' }),
-        el('div', { class: 'ly-launch-sub', text:
-          '啟動後會抓字幕、每隔一段自動暫停並整理單字片語。沒按之前完全不會動作，也不會用到 API。' }),
-        el('div', { class: 'ly-launch-sub ly-launch-note', text:
-          '按下去之後，這部影片的字幕文字與標題會送到你在設定頁選的 AI 供應商'
-          + '（Anthropic 或 Google）進行分析，不會經過本擴充作者的伺服器。' })
+        el('div', { class: 'ly-launch-head' }, [
+          el('div', { class: 'ly-launch-title', text: '開始學習這部影片' }),
+          tag ? el('span', { class: 'ly-launch-tag', text: tag }) : null
+        ]),
+        el('div', { class: 'ly-launch-desc', text:
+          '每 30 秒自動暫停，整理單字、片語與逐句翻譯；也能框選句子即時請 AI 解說。' }),
+        needKey ? el('div', { class: 'ly-launch-warn', text: '尚未設定 API Key，請先至設定頁完成設定。' }) : null,
+        el('div', { class: 'ly-launch-note', text:
+          '未啟動前不讀字幕也不消耗 API；啟動後字幕將送往你設定的 AI 供應商分析。' })
       ]));
-      P.foot.appendChild(el('button', {
-        class: 'ly-btn ly-wide ly-primary', text: '開始學習這部影片',
-        onclick: () => P.on.start && P.on.start()
-      }));
+      P.foot.appendChild(needKey
+        ? el('button', {
+            class: 'ly-btn ly-wide ly-primary', text: '⚙ 前往設定 API Key',
+            onclick: () => P.on.openOptions && P.on.openOptions()
+          })
+        : el('button', {
+            class: 'ly-btn ly-wide ly-primary', text: '▶ 開始學習這部影片',
+            onclick: () => P.on.start && P.on.start()
+          }));
       P.foot.classList.add('ly-foot-wrap');
     } else if (vm.kind === 'loading') {
       P.body.appendChild(el('div', { class: 'ly-msg' }, [el('span', { class: 'ly-spin' }), vm.msg || '處理中…']));
       if (vm.lines && vm.lines.length) {
         P.body.appendChild(el('section', { class: 'ly-sec' }, [
-          el('h4', {}, ['這一段的原文', el('small', { text: '筆記好了會接在下面' })]),
+          el('h4', {}, ['這段原文', el('small', { text: 'AI 整理完成後會自動顯示' })]),
           el('div', { class: 'ly-raw' }, vm.lines.map((t) => el('div', { class: 'ly-raw-line', text: t })))
         ]));
-        P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽整段',
+        P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽這段',
           onclick: () => P.on.replaySegment && P.on.replaySegment() }));
       }
     } else if (vm.kind === 'mismatch') {
       P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [
-        `抓到的字幕是${vm.got}，不是你設定的${vm.want}。`
+        `偵測到字幕為「${vm.got}」，與設定的「${vm.want}」不同。`
       ]));
       if (vm.sample) P.body.appendChild(el('div', { class: 'ly-raw' }, [
         el('div', { class: 'ly-raw-line', text: vm.sample + '…' })
       ]));
       P.body.appendChild(el('div', { class: 'ly-foot-note' }, [
-        'YouTube 會依你的帳號語言挑字幕軌，多國字幕的影片常常就挑到中文；'
-        + '新版的轉錄稿面板沒有切換語言的選項，擴充也改不了。'
-        + '可以換一支沒有中文字幕的影片，或到設定頁把學習語言改成上面偵測到的語言。'
+        'YouTube 預設會依帳號語言提供字幕。你可以換一部影片、到設定更改學習語言，或直接以這份字幕繼續。'
       ]));
-      P.foot.appendChild(el('button', { class: 'ly-btn', text: '設定',
+      P.foot.appendChild(el('button', { class: 'ly-btn', text: '前往設定',
         onclick: () => P.on.openOptions && P.on.openOptions() }));
-      P.foot.appendChild(el('button', { class: 'ly-btn', text: '仍要用這份字幕',
+      P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '仍用此字幕',
         title: '照這份字幕繼續分析', onclick: () => P.on.continueAnyway && P.on.continueAnyway() }));
     } else if (vm.kind === 'error') {
-      P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [vm.msg || '發生錯誤']));
+      const msg = vm.msg || '發生錯誤';
+      P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [msg]));
       // 兩種錯誤長得一樣，但能做的事不一樣：
       // 有 segment = 複習途中這一段整理失敗，可以重試這段或跳過去繼續看；
       // 沒有 segment = 字幕還沒載進來就失敗了，沒有「這一段」可以重試或略過。
@@ -390,29 +410,38 @@
         P.foot.appendChild(el('button', { class: 'ly-btn', text: '重試', onclick: () => P.on.retry && P.on.retry() }));
         P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '略過這段 ▶', onclick: () => P.on.continue && P.on.continue() }));
       } else {
+        if (/API key|設定/i.test(msg)) {
+          P.foot.appendChild(el('button', { class: 'ly-btn', text: '⚙ 前往設定', onclick: () => P.on.openOptions && P.on.openOptions() }));
+        }
         P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '↻ 重新載入字幕', onclick: () => P.on.reload && P.on.reload() }));
       }
     } else if (vm.kind === 'ready') {
+      P.body.appendChild(el('div', { class: 'ly-msg ly-ok' }, [
+        el('span', { class: 'ly-tick', text: '✓' }),
+        `字幕已載入（${vm.sourceLabel}）`
+      ]));
       P.body.appendChild(el('div', { class: 'ly-msg' }, [
-        `字幕已載入（${vm.sourceLabel}），共切成 ${vm.total} 段。播到第一個停點會自動暫停。`
+        vm.enabled
+          ? `共 ${vm.total} 段，播到段落結尾會自動暫停。`
+          : `共 ${vm.total} 段（目前為連續播放模式）。`
       ]));
     } else if (vm.kind === 'watching') {
       P.body.appendChild(el('div', { class: 'ly-msg' }, [
         vm.waitingNotes ? '播放中…'
-          : vm.nextStop != null ? `播放中…下一個停點 ${LY.fmtTime(vm.nextStop)}`
-          : '播放中…已經是最後一段'
+          : vm.nextStop != null ? `播放中 · 下次暫停 ${LY.fmtTime(vm.nextStop)}`
+          : '播放中 · 已經是最後一段'
       ]));
       if (vm.waitingNotes) {
         P.body.appendChild(el('div', { class: 'ly-msg' }, [
           el('span', { class: 'ly-spin' }),
-          '筆記還在整理，先讓影片繼續播 —— 好了就會停下來'
+          '正在整理這段筆記，完成後就會自動暫停'
         ]));
       } else if (vm.nextStop != null) {
         P.body.appendChild(vm.ready
-          ? el('div', { class: 'ly-msg ly-ok' }, [el('span', { class: 'ly-tick', text: '✓' }), '這一段已經整理好了，停下來就能直接開始'])
+          ? el('div', { class: 'ly-msg ly-ok' }, [el('span', { class: 'ly-tick', text: '✓' }), '這段筆記已就緒，暫停就能開始複習'])
           : el('div', { class: 'ly-msg' }, [
               vm.pending ? el('span', { class: 'ly-spin' }) : null,
-              vm.pending ? '背景整理中…' : '等一下會在背景先整理好這一段'
+              vm.pending ? '背景預先整理中…' : '稍後將在背景預先整理這段筆記'
             ].filter(Boolean)));
       }
     } else if (vm.kind === 'done') {
@@ -423,70 +452,73 @@
       ]);
       P.body.appendChild(el('div', { class: 'ly-done' }, [
         el('div', { class: 'ly-done-icon', text: '🎉' }),
-        el('div', { class: 'ly-done-title', text: '這部影片學完了！' }),
+        el('div', { class: 'ly-done-title', text: '這部影片學習完成！' }),
         el('div', { class: 'ly-done-sub', text: st.title || '' }),
         el('div', { class: 'ly-stats' }, [
-          row('複習段落', `${st.reviewed} / ${st.total} 段`),
+          row('已複習段落', `${st.reviewed} / ${st.total} 段`),
           row('影片長度', LY.fmtTime(st.duration)),
           row('整理單字', `${st.words} 個`),
           row('整理片語', `${st.phrases} 個`),
-          row('你收藏了', `${st.starred} 個`)
+          row('已收藏項目', `${st.starred} 項`)
         ]),
         st.starred
           ? null
-          : el('div', { class: 'ly-done-hint', text: '下次看的時候，點單字旁邊的 ★ 就能收進生字本。' }),
+          : el('div', { class: 'ly-done-hint', text: '小提醒：複習時點擊字詞或句子旁的 ★，就能收進生字本。' }),
         // 看完幾部之後才出現（見 app.js 的 SUPPORT_AFTER），而且只在這個畫面。
         // 學習途中不打擾，完成畫面是使用者剛拿到東西、手邊沒事的那一刻。
         vm.support
           ? el('div', { class: 'ly-support' }, [
+              el('div', { class: 'ly-support-msg', text: '免費、無廣告、不收你的資料 ✨ 覺得這個小工具有幫助的話，歡迎支持河童繼續進化！' }),
               el('a', {
                 class: 'ly-support-link',
                 href: 'https://ko-fi.com/kappa46122',
                 target: '_blank',
                 rel: 'noopener noreferrer',
                 text: '☕ 請河童喝杯咖啡'
-              }),
-              el('div', { class: 'ly-support-note', text: '如果對你有幫助的話' })
+              })
             ])
           : null
       ]));
 
       P.foot.classList.add('ly-foot-wrap');
-      P.foot.appendChild(el('button', {
-        class: 'ly-btn ly-wide ly-primary' + (st.starred ? '' : ' ly-disabled'),
-        text: st.starred ? `★ 匯出收藏的 ${st.starred} 個 → Anki` : '還沒有收藏任何項目',
-        title: '法文＋中文兩欄，用 Anki 內建的 Basic 直接匯入',
-        onclick: () => st.starred && P.on.exportCsv && P.on.exportCsv('starred', 'anki')
-      }));
-      P.foot.appendChild(el('button', {
-        class: 'ly-btn' + (st.starred ? '' : ' ly-disabled'), text: '📊 收藏表格',
-        title: '收藏項目的詳細欄位，用 Excel 開',
-        onclick: () => st.starred && P.on.exportCsv && P.on.exportCsv('starred', 'excel')
-      }));
-      P.foot.appendChild(el('button', {
-        class: 'ly-btn', text: '📊 全部表格',
-        title: '這部影片整理過的所有單字與片語',
-        onclick: () => P.on.exportCsv && P.on.exportCsv('all', 'excel')
-      }));
-      P.foot.appendChild(el('button', { class: 'ly-btn', text: '從頭再看',
+      if (st.starred) {
+        P.foot.appendChild(el('button', {
+          class: 'ly-btn ly-wide ly-primary',
+          text: `↓ 匯出收藏到 Anki（${st.starred} 項）`,
+          title: '原文＋翻譯兩欄，可直接匯入 Anki',
+          onclick: () => P.on.exportCsv && P.on.exportCsv('starred', 'anki')
+        }));
+        P.foot.appendChild(el('button', {
+          class: 'ly-btn', text: '↓ 匯出收藏表格',
+          title: '收藏項目的詳細欄位，用 Excel 開啟',
+          onclick: () => P.on.exportCsv && P.on.exportCsv('starred', 'excel')
+        }));
+      } else {
+        P.foot.appendChild(el('button', {
+          class: 'ly-btn', text: '↓ 匯出本片全部表格',
+          title: '這部影片整理過的所有單字與片語',
+          onclick: () => P.on.exportCsv && P.on.exportCsv('all', 'excel')
+        }));
+      }
+      P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 從頭再看',
         onclick: () => P.on.restart && P.on.restart() }));
     } else if (vm.kind === 'result') {
       P.body.appendChild(toggles());
       const d = vm.data;
-      if ((d.sentences || []).length) P.body.appendChild(section('逐句複習', '點句子播放', sentenceList(vm)));
+      if ((d.sentences || []).length) P.body.appendChild(section('逐句複習', '點擊播放 · 框選可解說', sentenceList(vm)));
       if ((d.vocab || []).length) P.body.appendChild(section('單字', '', vocabList(vm)));
-      if ((d.phrases || []).length) P.body.appendChild(section('片語・口語', '', phraseList(vm)));
+      if ((d.phrases || []).length) P.body.appendChild(section('片語與口語', '', phraseList(vm)));
       if ((d.notes || []).length) {
-        P.body.appendChild(section('文法・重點', '可收藏', el('ul', { class: 'ly-notes' },
+        P.body.appendChild(section('文法重點', '可點 ★ 收藏', el('ul', { class: 'ly-notes' },
           d.notes.map((n) => el('li', {}, [
             el('span', { class: 'ly-note-text', text: n }),
             starBtn({ type: 'grammar', word: n, lemma: '', pos: '', meaning: '', note: '' })
           ])))));
       }
-      if (vm.cached) P.body.appendChild(el('div', { class: 'ly-foot-note', text: '（這段用的是之前的分析結果，沒有重新呼叫 API）' }));
+      if (vm.cached) P.body.appendChild(el('div', { class: 'ly-foot-note', text: '✓ 已使用快取結果（未重複消耗 API）' }));
 
       P.body.appendChild(exportRow('starred'));
-      P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽整段', onclick: () => P.on.replaySegment && P.on.replaySegment() }));
+      P.foot.appendChild(el('button', { class: 'ly-btn', text: '↻ 重聽這段', onclick: () => P.on.replaySegment && P.on.replaySegment() }));
       P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '繼續播放 ▶', onclick: () => P.on.continue && P.on.continue() }));
     }
   };
