@@ -27,10 +27,9 @@ Language Tutor in YouTube
 **詳細說明**（已整合新版強效開頭、統一 Anki 匯出、圖文申請教學與精簡設定說明，可直接複製貼入後台「說明 *」）
 
 ```
-市面上的 YouTube 語言擴充幾乎都是「雙字幕＋點字查字典」——邊聽邊停下來查字，聽力節奏就斷了，也只查得到字典定義，看不到整句的道地用法。
+看 YouTube 學外語時，不必再邊聽邊查字典打斷節奏——先完整聽完一段，再一次學完重點。
 
-這個擴充反過來做：讓你先完整聽完一段，再一次整理。
-影片每播放約 30 秒就自動暫停於句尾，整理出這段的單字、片語、文法重點，並帶你逐句複習；聽的時候不打斷，停下來的時候才學。
+這個擴充會在影片每播放約 30 秒時自動暫停於句尾，整理出這段的單字、片語、文法重點與逐句翻譯，並帶你一句一句跟讀複習；聽的時候專心輸入，停下來的時候才學。
 
 ■ 主要功能
 
@@ -153,57 +152,91 @@ https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md
 那是商店列表上唯一能展示「自動暫停 → 筆記出現 → 收藏 → 匯出」這個流程的地方，
 靜態截圖講不出時間感。等審查通過之後再補，審查期間不要動商店列表。
 
-兩張宣傳圖都是 `store/make-promo.py` 排出來的，不是生圖模型畫的——生成的圖
-會在畫面裡寫出不存在的單字（試過一次，字幕那行變成
-`I active subtitles n active suitoos.`）。
+兩張宣傳圖使用 Nano Banana 生成無雜字的河童插畫底圖（`store/promo-mascot-bg.png`），再由 `store/make-promo.py`
+以演算法排版疊加銳利文字（避免生圖模型自己寫錯字）。
 
-跑馬燈那張商店規定 **JPEG 或 24 位元 PNG、不能有 alpha 透明層**。腳本的底圖
-用 RGB 模式建（不是 RGBA），河童貼上去時拿它自己的 alpha 當遮罩，貼完就沒有
-透明層了，最後再 assert 一次確認。
+跑馬燈與展示截圖皆規定 **JPEG 或 24 位元 PNG、不能有 alpha 透明層**，所有腳本皆以 `RGB` 模式輸出並經過 assert 檢查。
 
-排版遵守官方素材指引的兩條建議：**避免文字**（只有名稱和一行說明，沒有功能列表）
-和**縮到一半還要看得懂**（字級是演算法套出來的，不是寫死的，所以改字不會爆版）。
+排版遵守官方素材指引：**避免文字過多**（只有名稱與一行核心賣點）、**縮到一半還要看得懂**、**飽和色彩且少白灰底**，
+且不放 Chrome、YouTube、Anki 商標或假的「Add to Chrome」按鈕。
 
-圖裡不放 Chrome、YouTube、Anki 的標誌，也不放假的「Add to Chrome」按鈕——
-別人的商標用了要有授權，而那顆假按鈕使用者會想點但點不動。
+圖示四個尺寸已經做好（`icons/`），原圖是 `store/icon-source-2000.png`，商店圖示上傳 `icons/icon128.png`。
 
-圖示四個尺寸已經做好（河童讀書，四角已去背）。原圖是 `icon-source-2000.png`，
-要換圖就覆蓋它再跑 `python3 store/make-icons.py`。商店圖示直接上傳 `icons/icon128.png`。
-
-**截圖已經做好五張**（商店上限），在 `store/screenshots/`，按檔名順序上傳：
+**展示版截圖已經做好五張**（商店上限），位於 `store/showcase/`（並同步於 `dist/上傳用/商店展示版截圖/`），按檔名順序上傳：
 
 | 檔名 | 展示什麼 |
 |---|---|
-| `01-單字與片語整理.png` | 法文。逐句翻譯＋下方的單字卡（含詞性與用法說明）。資訊量最大，放第一張 |
-| `02-框選解說.png` | 日文。框選「レジで会話を撮影しました」之後逐詞拆解。一張圖同時做兩件事：證明不是只支援歐洲語言，並展示別的擴充沒有的功能 |
-| `03-日文也可以.png` | 日文的逐句對照與單字 |
-| `04-逐句複習與翻譯.png` | 整段的逐句對照，其中一句被選取、顯示 `▶` 與 `0.75×` |
-| `05-自動暫停的時刻.png` | 影片停在段落結尾、面板已經備好筆記的那一刻 |
+| `01-單字與片語整理.png` | 法文。逐句翻譯＋單字卡（讀書河童徽章） |
+| `02-框選解說.png` | 日文。框選句子片段後逐詞拆解，展現差異化功能（耳機河童徽章） |
+| `03-日文也可以.png` | 日文的逐句對照與單字（讀書河童徽章） |
+| `04-逐句複習與翻譯.png` | 逐句重播、`0.75×` 慢速跟讀與聽寫模式（耳機河童徽章） |
+| `05-匯出與圖文設定.png` | 新版 `2.0.0` 圖文 API 申請教學＋完成統計與匯出 Anki／Excel（咖啡河童徽章） |
 
-排第二的是解說而不是單純的日文畫面，因為「翻譯字幕」的擴充滿街都是，
-「框一段問它為什麼這樣說」才是會讓人裝下去的理由。
-
-原圖在 `store/screenshots/raw/`，`store/make-screenshots.py` 把它們裁成 1280×800
-並把兩個帳號頭像模糊掉。要加截圖的話，丟一張進 `raw/`、檔名開頭編號排好順序，
-重跑腳本就好。
-
-原圖之所以也進版控：處理過程會不可逆地裁切和縮放，沒有原圖的話，哪天商店改規格
-或想重新裁一次，就只能重拍。
-
-五張已經滿了。之後想換掉其中一張的話，最值得補的是「匯出的 Anki 檔在 Anki
-裡的樣子」——「能匯進 Anki」是會讓人決定安裝的功能，但光看文字沒有說服力。
-要換的話建議換掉 `05`，自動暫停那張是五張裡資訊量最低的。
-
-**設定頁那張不要拍**，或拍之前先把 API key 清空——那是唯一會洩漏東西的畫面。
+> 💡 `01`～`04` 的原始截圖位於 `store/screenshots/raw/`，為 `1.0.0` 舊版面板樣式。日後若實機用 `2.0.0` 重拍這 4 張放入 `raw/`，依序執行 `python3 store/make-screenshots.py` 與 `python3 store/make-store-cards.py` 即可自動更新整套 `1280×800` 展示圖。
 
 ---
 
 ## 4. 送審前的最後確認
 
-- [ ] `node test/run.js` 全綠
+- [x] `node test/run.js` 全綠（114 項測試＋語法＋manifest 檢查全過）
 - [x] 用真實 API key 完整跑過一支影片：啟動 → 暫停 → 筆記出現 → 收藏 → 匯出 ✅ 2026/11
 - [ ] 另一家供應商也切過去跑一次（審核員不會知道你平常只用哪一家）
-- [ ] `icons/` 已換成正式圖
+- [x] `icons/` 已換成正式圖
 - [ ] repo 已 public，隱私權政策網址無痕可開
-- [ ] `./package.sh` 產生的 zip 解開後確認沒有 `test/`、`.claude/`、`.git/`
-- [ ] 把 zip 以「載入未封裝項目」的方式再裝一次，確認功能正常（審核員就是這樣測的）
+- [x] `./package.sh` 已產出 `dist/youtube-language-tutor-2.0.0.zip`（白名單打包，不含 `test/`、`.git/`）
+- [ ] 把 `dist/youtube-language-tutor-2.0.0.zip` 解開後以「載入未封裝項目」在 Chrome 實測一次（審核員就是這樣測的）
+
+---
+
+## 5. 英文商店文案（選填 · 若要在 Chrome Web Store 新增 English 語系）
+
+**Name**
+```
+Language Tutor in YouTube
+```
+
+**Summary**（113 字元，符合 132 字元上限）
+```
+Auto-pause YouTube every 30s to organize vocabulary, phrases, and grammar notes—then review sentence by sentence.
+```
+
+**Description**
+```
+Learning languages on YouTube shouldn't mean pausing every three seconds to look up single words in a dictionary.
+
+Language Tutor in YouTube lets you listen first, then learn: the video automatically pauses at natural sentence endings roughly every 30 seconds, extracts key vocabulary, idioms, and grammar notes, and walks you through sentence-by-sentence review.
+
+■ Key Features
+
+- Auto-Pause by Segment: Automatically pauses every ~30s at sentence boundaries to summarize the clip (toggle Continuous Play anytime).
+- Sentence Review & Dictation: Click any sentence to replay it, slow down to 0.75x for shadowing, or blur transcripts for dictation practice.
+- Highlight to Explain: Select any phrase in a sentence to ask AI what it means and how it works in that exact context.
+- Bookmark & Export: Star words, phrases, sentences, or grammar notes across videos and export to Excel-ready CSV or ready-to-import Anki flashcards.
+- Background Prefetch: Prepares the next segment while you watch so review starts immediately when the video pauses.
+
+■ Before You Start
+
+- Bring your own API key (Google Gemini with a free tier, or Anthropic Claude—step-by-step visual setup guide included in Settings). Results are cached locally so rewatching never double-charges.
+- Requires videos with subtitles (YouTube auto-generated captions work too).
+- Supports 10 target languages: French, English, Japanese, Korean, Spanish, German, Italian, Portuguese, Chinese, and Russian.
+- Manual activation: Does nothing until you click "Start Learning" on a video or click the toolbar icon.
+
+■ Privacy
+
+No developer servers, no ads, and no tracking. Your API key, settings, wordbook, and cache stay locally in your browser. Captions are sent directly from your browser to your chosen AI provider only after you start a session.
+
+Open source: https://github.com/UncleLin332/youtube-language-tutor
+
+■ Support Development
+
+Free, open-source, and ad-free. If this tool helps you learn from YouTube videos, consider buying the kappa a coffee:
+https://ko-fi.com/kappa46122
+```
+
+**2.0.0 更新重點（供 GitHub Release 或備忘用）**
+```
+- 全新精簡側邊面板與設定頁介面，移除冗餘選項，保留最直覺的學習流程
+- 設定頁內建 Gemini 與 Claude API Key 互動式圖文申請教學
+- Anki 匯出統一為免設定兩欄格式，支援內建 Basic 牌組直接匯入
+- 新增可愛河童咖啡贊助卡片與摺疊式隱私說明
+```

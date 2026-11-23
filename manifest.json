@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Language Tutor in YouTube",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "觀看 YouTube 時自動分段暫停，整理單字與片語並帶你逐句複習。",
   "homepage_url": "https://github.com/UncleLin332/youtube-language-tutor",
   "icons": {

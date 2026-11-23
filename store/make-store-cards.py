@@ -80,29 +80,29 @@ def make_card(idx, title, subtitle, crop_img, badge_kind):
     im = gradient_bg()
     d = ImageDraw.Draw(im)
 
-    # Top header
-    pad_x = 48
-    d.rounded_rectangle((pad_x, 30, pad_x + 6, 94), radius=3, fill=ACCENT)
-    d.text((pad_x + 22, 26), title, font=f_cjk(34), fill=FG)
-    d.text((pad_x + 22, 72), subtitle, font=f_cjk(18), fill=DIM)
+    # Top header (compact so screenshot fills more of 1280x800)
+    pad_x = 28
+    d.rounded_rectangle((pad_x, 22, pad_x + 6, 82), radius=3, fill=ACCENT)
+    d.text((pad_x + 20, 18), title, font=f_cjk(33), fill=FG)
+    d.text((pad_x + 20, 62), subtitle, font=f_cjk(17), fill=DIM)
 
     # Right cute kappa mascot badge + index pill
-    badge = make_badge(badge_kind, 74)
+    badge = make_badge(badge_kind, 68)
     bx = W - pad_x - badge.width
-    by = 24
+    by = 18
     im.paste(badge, (bx, by), badge)
 
     pill_txt = f'0{idx} / 05'
     pf = f_en(14)
     pb = pf.getbbox(pill_txt)
     pw = (pb[2] - pb[0]) + 24
-    px = bx - 14 - pw
-    d.rounded_rectangle((px, 44, px + pw, 76), radius=16, fill=(36, 32, 62), outline=ACCENT, width=1)
-    d.text((px + 12, 51), pill_txt, font=pf, fill=FG)
+    px = bx - 12 - pw
+    d.rounded_rectangle((px, 36, px + pw, 68), radius=16, fill=(36, 32, 62), outline=ACCENT, width=1)
+    d.text((px + 12, 43), pill_txt, font=pf, fill=FG)
 
-    # Framed content area
-    box_x, box_y = 40, 118
-    box_w, box_h = W - 80, H - 148
+    # Framed content area (near full-bleed for crisp readability)
+    box_x, box_y = 20, 102
+    box_w, box_h = W - 40, H - 118
     scale = min(box_w / crop_img.width, box_h / crop_img.height)
     nw, nh = round(crop_img.width * scale), round(crop_img.height * scale)
     resized = crop_img.resize((nw, nh), Image.LANCZOS)
@@ -110,9 +110,8 @@ def make_card(idx, title, subtitle, crop_img, badge_kind):
     fx = box_x + (box_w - nw) // 2
     fy = box_y + (box_h - nh) // 2
 
-    # Soft shadow + rounded border
-    d.rounded_rectangle((fx - 2, fy - 2, fx + nw + 2, fy + nh + 2), radius=14, fill=(10, 10, 15), outline=CARD_BORDER, width=2)
-    mask = round_mask(nw, nh, 12)
+    d.rounded_rectangle((fx - 2, fy - 2, fx + nw + 2, fy + nh + 2), radius=8, fill=(10, 10, 15), outline=CARD_BORDER, width=2)
+    mask = round_mask(nw, nh, 6)
     im.paste(resized, (fx, fy), mask)
     return im
 
