@@ -86,7 +86,7 @@ def make_card(idx, title, subtitle, crop_img, badge_kind):
     d.text((pad_x + 20, 18), title, font=f_cjk(33), fill=FG)
     d.text((pad_x + 20, 62), subtitle, font=f_cjk(17), fill=DIM)
 
-    # Right cute kappa mascot badge + index pill
+    # Right: kappa mascot badge + index pill
     badge = make_badge(badge_kind, 68)
     bx = W - pad_x - badge.width
     by = 18
@@ -130,7 +130,7 @@ def build_feature_5():
     d.text((28, 36), '支援 Claude 與 Gemini · 內建圖文申請教學', font=f_cjk(22), fill=FG)
     d.text((28, 70), 'API Key 僅存於本機瀏覽器，不經過任何第三方伺服器', font=f_cjk(15), fill=DIM)
 
-    # Cute coffee kappa banner under guide on the left
+    # Coffee kappa banner under the guide on the left
     coffee = make_badge('coffee', 64)
     d.rounded_rectangle((28, 504, 708, 608), radius=12, fill=(32, 28, 24), outline=(120, 92, 32), width=1)
     canvas.paste(coffee, (48, 524), coffee)

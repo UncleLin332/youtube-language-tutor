@@ -13,9 +13,9 @@
     last: null
   };
 
-  // 注意：視窗變窄、劇院模式、全螢幕時，YouTube 會把 #secondary 設成 display:none，
-  // 但元素還留在 DOM 裡。只檢查「存在」會讓面板掛進一個看不見的容器裡人間蒸發，
-  // 所以這裡要檢查它真的有被算進版面。
+  // 注意：視窗變窄、劇院模式或全螢幕時，YouTube 會將 #secondary 設為 display:none，
+  // 但元素仍留在 DOM 中。若只檢查「存在」，面板會被掛進看不見的容器而無法顯示，
+  // 因此須檢查該元素確實參與版面。
   function usable(node) {
     if (!node) return false;
     if (node.offsetParent === null) return false;
@@ -30,7 +30,7 @@
     return null;   // 找不到可用的側欄 → 改用浮動面板
   }
 
-  // 版面會在使用者切劇院模式／改變視窗大小時變動，面板要跟著換位置
+  // 版面會在使用者切換劇院模式或調整視窗大小時變動，面板須隨之調整位置
   P.reflow = function () {
     if (!P.root || !document.contains(P.root)) return;
     const h = host();
@@ -133,8 +133,8 @@
     return chips;
   }
 
-  // 隨時可以匯出目前收藏的，不必等整部影片看完（常常是分好幾次看的）。
-  // 兩顆按鈕是兩種用途：表格給人看（Excel），Anki 檔給機器吃。
+  // 可隨時匯出目前的收藏，不必等整部影片看完（使用者常分次觀看）。
+  // 兩種匯出各有用途：表格供閱讀（Excel），Anki 檔供匯入 Anki。
   function exportRow(scope) {
     const label = el('span', { class: 'ly-export-label' });
     const excel = el('button', { class: 'ly-mini', text: '↓ 表格', title: '匯出詳細欄位表格，可用 Excel 或 Numbers 開啟' });
@@ -156,8 +156,8 @@
   }
 
   // ---------- 框選句子的一小段 ----------
-  // 句子太長時常常只想記住其中一個子句，或是只有某個結構看不懂。
-  // 在原文那一行拉出選取，就跳出「解說 / 收藏」。
+  // 句子較長時，常只需記住其中一個子句，或只有某個結構看不懂。
+  // 在原文那一行選取文字，即會出現「解說 / 收藏」。
   let selTool = null;
 
   function hideSelTool() {
@@ -171,12 +171,12 @@
     const text = String(sel).trim();
     if (text.length < 2) return null;
 
-    // 只認原文那一行的選取：中文翻譯或單字卡不需要這個功能
+    // 僅處理原文那一行的選取：中文翻譯與單字卡不需要此功能
     let node = sel.anchorNode;
     if (node && node.nodeType === 3) node = node.parentNode;
     const fr = node && node.closest && node.closest('.ly-fr');
     if (!fr || !P.root || !P.root.contains(fr)) return null;
-    // 整句都選起來的話，用原本的句子收藏就好
+    // 若整句都被選取，使用原本的句子收藏即可
     if (text === fr.textContent.trim()) return null;
 
     const li = fr.closest('.ly-sent');
@@ -246,8 +246,8 @@
     info.li.insertAdjacentElement('afterend', box);
   };
 
-  // 收藏鈕。狀態一律跟 app 查，不要只記在 DOM 的 class 上——
-  // 面板任何一次重繪（例如切換「顯示翻譯」）都會把 class 洗掉。
+  // 收藏鈕。狀態一律向 app 查詢，不可僅記錄在 DOM 的 class 上——
+  // 面板每次重繪（例如切換「顯示翻譯」）都會重置 class。
   function starBtn(item, extraClass) {
     const on = !!(P.on.isStarred && P.on.isStarred(item.type, item.word));
     const b = el('button', {
@@ -278,8 +278,8 @@
         el('button', { class: 'ly-mini', text: '0.75×', title: '慢速跟讀（0.75×）',
           onclick: (e) => { e.stopPropagation(); P.on.playSentence && P.on.playSentence(s, 0.75, i); } })
       ]);
-      // 星號放在 tools 之外：tools 平常是透明的（hover 才顯示），
-      // 但收藏要隨時看得到才會有人用
+      // 收藏鈕置於 tools 之外：tools 平時為透明（hover 時才顯示），
+      // 但收藏鈕須隨時可見，才容易被使用
       const star = starBtn({
         type: 'sentence', word: s.text, meaning: s.translation || '',
         lemma: '', pos: '', note: ''
@@ -403,9 +403,9 @@
     } else if (vm.kind === 'error') {
       const msg = vm.msg || '發生錯誤';
       P.body.appendChild(el('div', { class: 'ly-msg ly-err' }, [msg]));
-      // 兩種錯誤長得一樣，但能做的事不一樣：
-      // 有 segment = 複習途中這一段整理失敗，可以重試這段或跳過去繼續看；
-      // 沒有 segment = 字幕還沒載進來就失敗了，沒有「這一段」可以重試或略過。
+      // 兩種錯誤外觀相同，但可採取的處理不同：
+      // 有 segment = 複習途中這一段整理失敗，可重試這一段或略過後繼續觀看；
+      // 無 segment = 字幕尚未載入就失敗，沒有「這一段」可供重試或略過。
       if (vm.segment) {
         P.foot.appendChild(el('button', { class: 'ly-btn', text: '重試', onclick: () => P.on.retry && P.on.retry() }));
         P.foot.appendChild(el('button', { class: 'ly-btn ly-primary', text: '略過這段 ▶', onclick: () => P.on.continue && P.on.continue() }));
@@ -464,8 +464,8 @@
         st.starred
           ? null
           : el('div', { class: 'ly-done-hint', text: '小提醒：複習時點擊字詞或句子旁的 ★，就能收進生字本。' }),
-        // 看完幾部之後才出現（見 app.js 的 SUPPORT_AFTER），而且只在這個畫面。
-        // 學習途中不打擾，完成畫面是使用者剛拿到東西、手邊沒事的那一刻。
+        // 累計看完一定部數後才出現（見 app.js 的 SUPPORT_AFTER），且僅出現在此畫面。
+        // 學習途中不打擾；完成畫面是使用者剛完成一部影片、可從容閱讀的時刻。
         vm.support
           ? el('div', { class: 'ly-support' }, [
               el('div', { class: 'ly-support-msg', text: '免費、無廣告、不收你的資料 ✨ 覺得這個小工具有幫助的話，歡迎支持河童繼續進化！' }),
@@ -528,7 +528,7 @@
     clearTimeout(reflowTimer);
     reflowTimer = setTimeout(() => P.reflow(), 250);
   });
-  // 劇院模式不一定會觸發 resize，所以也定期檢查一次
+  // 切換劇院模式不一定會觸發 resize，因此也定期檢查
   setInterval(() => P.reflow(), 2000);
 
   LY.Panel = P;

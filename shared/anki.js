@@ -1,19 +1,19 @@
 // 匯出成 Anki 可以直接匯入的 CSV
 //
-// Anki 2.1.50 以後支援檔案開頭的 # 指示行，所以匯出的檔案不需要使用者手動設定分隔符號
-// 或欄位對應，拖進 Anki 就能用。注意：這種檔案開頭不能加 BOM，否則 #separator 那行
-// 會被當成一般內容。
+// Anki 2.1.50 起支援檔案開頭的 # 指示行，因此匯出的檔案不需使用者手動設定分隔符號
+// 或欄位對應，匯入即可使用。注意：此類檔案開頭不可加 BOM，否則 #separator 那一行
+// 會被當作一般內容。
 (() => {
   const A = (globalThis.LYAnki = globalThis.LYAnki || {});
 
   const csvEsc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-  // html:true 之下換行要用 <br>，直接留著 \n 會讓 CSV 多出一列
+  // html:true 時換行須用 <br>，直接保留 \n 會使 CSV 多出一列
   const htmlEsc = (v) => String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\r?\n/g, '<br>');
 
-  // Anki 的標籤不能有空白。YouTube 標題常是「影片名 | 頻道名」，取前半就夠，
-  // 並且在底線處截斷，不要留下半個字。
+  // Anki 的標籤不可含空白。YouTube 標題常為「影片名 | 頻道名」，取前半即可，
+  // 並於底線處截斷，避免留下不完整的字。
   const tagify = (v) => {
     let t = String(v || '').split('|')[0].trim()
       .replace(/["',:]/g, '').replace(/\s+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
@@ -27,7 +27,7 @@
 
   A.TYPE_LABEL = { word: '單字', phrase: '片語', grammar: '文法', sentence: '句子', fragment: '片段' };
 
-  // 文法重點是一段敘述，不適合整段當正面；拆成「主題 → 說明」
+  // 文法重點是一段敘述，不適合整段作為正面；拆成「主題 → 說明」
   A.grammarFront = (text) => {
     const t = String(text || '').trim();
     const m = t.match(/^(.{2,28}?)\s*[：:，,。]/);
@@ -47,9 +47,9 @@
     return it.url ? '<a href="' + htmlEsc(it.url) + '">▶ 影片片段</a>' : '';
   }
 
-  // 分欄格式：每個資料各佔一欄，之後可以在 Anki 自己排版
-  // （例如用例句做填空、或做「看中文想法文」的反向卡）。
-  // 需要先在 Anki 建一個同名的筆記類型，欄位順序照 A.FIELDS。
+  // 分欄格式：每項資料各佔一欄，可在 Anki 自行排版
+  // （例如以例句製作填空卡，或製作「看中文想法文」的反向卡）。
+  // 須先在 Anki 建立同名的筆記類型，欄位順序依 A.FIELDS。
   A.toFieldsCsv = (items, opts) => {
     const o = opts || {};
     const rows = [
@@ -67,7 +67,7 @@
         htmlEsc(it.meaning),
         htmlEsc(it.example),
         htmlEsc(it.exampleZh),
-        // 文法重點：標題放法文欄，完整敘述放筆記欄；沒被截短就不用重複一次
+        // 文法重點：標題放法文欄，完整敘述放筆記欄；若標題未被截短則不重複
         htmlEsc(isGrammar
           ? [A.grammarFront(it.word) === it.word ? '' : it.word, it.note].filter(Boolean).join('　')
           : it.note),
@@ -80,7 +80,7 @@
     return rows.join('\r\n') + '\r\n';
   };
 
-  // 簡單格式：Anki 內建的 Basic 筆記類型就能直接匯入，不用先設定
+  // 簡易格式：可直接匯入 Anki 內建的 Basic 筆記類型，無須事先設定
   A.toBasicCsv = (items, opts) => {
     const o = opts || {};
     const rows = ['#separator:Comma', '#html:true', '#columns:Front,Back,Tags'];
@@ -109,8 +109,8 @@
     return rows.join('\r\n') + '\r\n';
   };
 
-  // 精簡 Anki 格式：正面法文、背面中文，兩欄。
-  // Anki 內建的 Basic 筆記類型剛好就是 Front/Back，所以不用建筆記類型、不用寫範本。
+  // 精簡 Anki 格式：正面為原文、背面為翻譯，共兩欄。
+  // Anki 內建的 Basic 筆記類型即為 Front/Back，因此不需建立筆記類型或撰寫範本。
   A.toSimpleAnkiCsv = (items, opts) => {
     const o = opts || {};
     const rows = ['#separator:Comma', '#html:true', '#columns:Front,Back,Tags', '#tags column:3'];
@@ -125,8 +125,8 @@
     return rows.join('\r\n') + '\r\n';
   };
 
-  // 給人看的表格：純文字、沒有 HTML、沒有 Anki 指示行。
-  // 開頭要加 BOM，否則 Excel 開啟時中文會變亂碼——這點和 Anki 剛好相反。
+  // 供閱讀的表格：純文字，不含 HTML 與 Anki 指示行。
+  // 開頭須加 BOM，否則 Excel 開啟時中文會變成亂碼——這點與 Anki 檔相反。
   A.EXCEL_COLUMNS = ['類型', '法文', '中文', '例句', '例句翻譯', '筆記', '詞性', '原形', '影片', '連結'];
 
   A.toExcelCsv = (items) => {
@@ -144,7 +144,7 @@
     return '\uFEFF' + rows.join('\r\n') + '\r\n';
   };
 
-  // format: 'excel' 給人看、'fields' 分欄給 Anki、其餘走精簡 Anki
+  // format: 'excel' 供閱讀、'fields' 分欄格式（Anki）、其餘為精簡 Anki 格式
   A.toCsv = (items, opts) => {
     const o = opts || {};
     if (o.format === 'excel') return A.toExcelCsv(items, o);

@@ -79,7 +79,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
-  // 啟動中的分頁在圖示上顯示 ON，才知道這支影片正在被處理
+  // 啟動中的分頁於圖示上顯示 ON，標示該影片正在處理中
   if (msg.type === 'setBadge') {
     const tabId = sender && sender.tab && sender.tab.id;
     if (tabId != null) {
@@ -99,17 +99,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// 分頁換頁時把徽章清掉，否則離開 YouTube 之後圖示還會一直顯示 ON。
-// 只看 status，不讀 url（讀 url 需要 tabs 權限）；真的重新啟動時 content script 會再設回來。
+// 分頁換頁時清除徽章，否則離開 YouTube 後圖示仍會顯示 ON。
+// 僅檢查 status，不讀取 url（讀取 url 需要 tabs 權限）；實際重新啟動時由 content script 再度設定。
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === 'loading') {
     chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {});
   }
 });
 
-// 點工具列圖示＝在這支影片上開關擴充。
-// 不讀 tab.url（那需要額外的 tabs 權限），直接問 content script：
-// 它不在影片頁、或根本還沒載入，就退回開設定頁。
+// 點選工具列圖示＝在該影片上切換擴充的啟用狀態。
+// 不讀取 tab.url（需要額外的 tabs 權限），改為詢問 content script：
+// 若其不在影片頁，或尚未載入，則改為開啟設定頁。
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || tab.id == null) { chrome.runtime.openOptionsPage(); return; }
   try {

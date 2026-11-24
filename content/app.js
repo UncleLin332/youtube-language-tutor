@@ -17,25 +17,25 @@
     range: null,         // 單句播放中
     enabled: true,
     analyses: new Map(), // segIndex -> {data, cached}
-    inflight: new Map(), // segIndex -> Promise（正在送的請求）
-    active: false,       // 使用者按下「開始學習」了沒
-    routed: false,        // 這支影片的面板掛上去了沒
+    inflight: new Map(), // segIndex -> Promise（進行中的請求）
+    active: false,       // 使用者是否已按下「開始學習」
+    routed: false,        // 這支影片的面板是否已掛載
     forceLang: false,    // 使用者確認過要用不同語言的字幕
-    pendingCues: null,   // 語言不符時先擱著的字幕
-    waitingFor: -1,      // 已經播過邊界、但筆記還沒好的那一段
+    pendingCues: null,   // 語言不符時暫存的字幕
+    waitingFor: -1,      // 已播過邊界、但筆記尚未就緒的段落
     waitUntil: 0,        // 寬限期的截止秒數
     collected: [],
-    starred: [],         // 這部影片打過星號的項目
+    starred: [],         // 這部影片已收藏（★）的項目
     times: null,         // 目前這段的「句子 → 時間」對應表
-    counted: false,      // 這部影片的「看完」已經記過一次了沒
-    finished: 0          // 總共看完幾部（跨影片，存在 storage）
+    counted: false,      // 這部影片的「看完」是否已計入
+    finished: 0          // 累計看完的影片數（跨影片，存於 storage）
   };
 
-  // 看完第幾部影片才在完成畫面顯示贊助連結。第一次就開口要錢，
-  // 使用者連這東西好不好用都還不知道。
+  // 累計看完幾部影片後，才在完成畫面顯示贊助連結；
+  // 過早出現會在使用者尚未評估工具價值時造成打擾。
   const SUPPORT_AFTER = 3;
 
-  // 筆記還沒好時最多讓影片多播幾秒；超過就還是停下來，改成先顯示這段的字幕原文
+  // 筆記尚未就緒時，最多讓影片多播幾秒；逾時仍會暫停，並先顯示這段的字幕原文
   const PAUSE_GRACE_SECONDS = 20;
 
   // ---------- 播放控制 ----------
@@ -68,13 +68,13 @@
     if (!seg) return;
     if (t < seg.end - 0.05) return;
 
-    // 到邊界了，但筆記還沒整理好：先讓影片繼續播，不要停下來乾等。
-    // 筆記一到（下一個 timeupdate 最多 0.25 秒後）就會停，所以停下來一定是能馬上學的狀態。
+    // 已到段落邊界但筆記尚未整理完成：讓影片繼續播放，不停下來等待。
+    // 筆記就緒後（最遲於下一個 timeupdate，約 0.25 秒內）才暫停，因此暫停時必定能立即開始複習。
     if (!S.analyses.has(S.armed)) {
       if (S.waitingFor !== S.armed) {
         S.waitingFor = S.armed;
         S.waitUntil = t + PAUSE_GRACE_SECONDS;
-        prefetch(S.armed);          // 保險：確定這一段真的在跑
+        prefetch(S.armed);          // 保險：確保這一段確實在處理中
         renderWatching();
       }
       if (t < S.waitUntil) return;  // 還在寬限期內，繼續播
@@ -115,8 +115,8 @@
 
   // ---------- 複習流程 ----------
   async function enterReview(i) {
-    // 字幕還沒載進來（或載入失敗）時沒有「第 i 段」可以複習。
-    // 載入階段的錯誤面板也會走到這裡，少了這道護欄就會丟 TypeError 而且沒人接。
+    // 字幕尚未載入（或載入失敗）時，不存在可複習的「第 i 段」。
+    // 載入階段的錯誤面板也會進入此處，缺少此檢查會拋出未被處理的 TypeError。
     if (!S.segments || i < 0 || i >= S.segments.length) return;
     S.mode = 'review';
     S.video.pause();
@@ -129,7 +129,7 @@
     Panel.render({
       kind: 'loading',
       msg: '正在整理這段的單字與句子…',
-      lines: seg.lines.map((l) => l.text),   // 筆記還沒到，先給原文可以讀、可以重聽
+      lines: seg.lines.map((l) => l.text),   // 筆記尚未就緒，先提供原文供閱讀與重聽
       segment: seg,
       total: S.segments.length,
       enabled: S.enabled
@@ -144,8 +144,8 @@
     }
   }
 
-  // 同一段可能同時被「預抓」和「暫停時的即時需求」要求。
-  // 沒有去重的話會送出兩次請求：付兩次錢，而且後送的那次還比較慢。
+  // 同一段可能同時被「預先整理」與「暫停時的即時需求」請求。
+  // 未去重會送出兩次請求，造成重複計費，且後送出的請求反而較慢。
   function requestAnalysis(i) {
     if (S.analyses.has(i)) return Promise.resolve(S.analyses.get(i));
     const running = S.inflight.get(i);
@@ -160,8 +160,8 @@
   }
 
   async function sendAnalysis(i) {
-    // 預抓的請求可能在使用者已經切到下一支影片之後才回來，
-    // 那時 S.analyses / S.collected 已經是新影片的了，不能寫進去。
+    // 預先整理的請求可能在使用者切換到下一支影片之後才回傳；
+    // 此時 S.analyses / S.collected 已屬於新影片，不可寫入。
     const token = S.token;
     const seg = S.segments[i];
     const res = await chrome.runtime.sendMessage({
@@ -186,22 +186,22 @@
     requestAnalysis(i).catch(() => {});
   }
 
-  // 使用者正在看第 N 段時，背景就先把第 N 段整理好，時間到就能直接開始複習。
-  // 順便也抓第 N+1 段，複習完按繼續同樣不用等。
+  // 使用者觀看第 N 段時，背景先整理第 N 段，時間到即可直接開始複習；
+  // 同時預先整理第 N+1 段，複習完按下繼續時同樣不需等待。
   function ensureAhead() {
     if (!S.enabled || !S.segments || S.armed < 0) return;
     prefetch(S.armed);
     prefetch(S.armed + 1);
   }
 
-  // 拖動進度條時 arm() 會連續觸發，延遲一下再抓，免得抓了一堆用不到的段落
+  // 拖動進度條時 arm() 會連續觸發，故延遲後才請求，避免整理大量用不到的段落
   let aheadTimer = null;
   function scheduleAhead(delay) {
     clearTimeout(aheadTimer);
     aheadTimer = setTimeout(ensureAhead, delay == null ? 1200 : delay);
   }
 
-  // 找一句包含這個詞的例句，當作卡片的例句
+  // 尋找包含該詞的例句，作為卡片的例句
   function findExample(data, word) {
     if (!word) return null;
     const w = String(word).toLowerCase();
@@ -210,7 +210,7 @@
   }
 
   function entry(data, at, o) {
-    // 句子本身就是例句，再去找會變成重複；文法重點也不需要
+    // 句子本身即為例句，再尋找會造成重複；文法重點也不需要例句
     const ex = (o.type === 'grammar' || o.type === 'sentence') ? null : findExample(data, o.word);
     return Object.assign({
       lemma: '', pos: '', meaning: '', note: '',
@@ -240,7 +240,7 @@
   }
 
   function renderResult(i, r) {
-    // 句子 → 時間的對應表，點句子播放時用
+    // 句子 → 時間的對應表，供點選句子播放時使用
     S.times = LY.sentenceTimes(S.segments[i], r.data.sentences || []);
     Panel.render({
       kind: 'result',
@@ -266,8 +266,8 @@
     });
   }
 
-  // 同一部影片「從頭再看」再看完一次，不重複計數。
-  // 存取失敗就當作沒看完過——贊助連結不出現，比畫面壞掉好。
+  // 同一部影片重新看完時不重複計數。
+  // 儲存空間存取失敗時視為尚未看完過：寧可不顯示贊助連結，也不讓畫面出錯。
   async function bumpFinished() {
     if (S.counted) return S.finished;
     S.counted = true;
@@ -321,14 +321,14 @@
     S.mode = 'watching';
     endRange();
     const seg = S.segments[S.current];
-    // 已經是最後一段的話直接收尾：影片播到底再 play() 有些瀏覽器會從頭開始
+    // 若已是最後一段則直接收尾：影片播至結尾後再呼叫 play()，部分瀏覽器會從頭開始播放
     const dur = S.video.duration || 0;
     if (S.current >= S.segments.length - 1 || (dur && seg && seg.end >= dur - 0.3)) {
       showDone();
       return;
     }
-    // 只往前對齊：單句播放會把游標留在段落中間，要拉到段尾；
-    // 但寬限期多播過頭時不能倒帶，否則剛看過的內容會重播一次
+    // 僅向前對齊：單句播放會讓播放位置停在段落中間，需移至段尾；
+    // 但寬限期內播放超出邊界時不可倒帶，否則剛看過的內容會重播
     if (seg && S.video.currentTime < seg.end - 1.5) S.video.currentTime = seg.end;
     arm(S.video.currentTime);
     renderWatching();
@@ -337,8 +337,8 @@
   }
 
   // ---------- 匯出 ----------
-  // scope : 'starred' = 你打過星號的；其餘 = 這部影片整理過的全部
-  // format: 'excel' = 詳細表格給人看；其餘 = Anki 匯入檔
+  // scope : 'starred' = 已收藏（★）的項目；其餘 = 這部影片整理過的全部
+  // format: 'excel' = 詳細表格（供閱讀）；其餘 = Anki 匯入檔
   function exportCsv(scope, format) {
     const starred = scope === 'starred';
     const items = starred ? S.starred : S.collected;
@@ -387,7 +387,7 @@
   }
 
   async function starFragment(info) {
-    // 先問出意思再存，否則卡片背面會是空的
+    // 先取得解說再儲存，否則卡片背面會是空白
     Panel.showExplain(info, { loading: true });
     try {
       const data = await requestExplain(info);
@@ -402,7 +402,7 @@
     }
   }
 
-  // 同一個字可能在不同影片都收藏過，所以用「類型＋內容」當鍵，取消時再加上影片範圍
+  // 同一個字可能在不同影片都被收藏，故以「類型＋內容」為鍵，取消收藏時再限定影片範圍
   function starKey(type, word) { return (type || 'word') + '\u0000' + String(word || ''); }
 
   function isStarred(type, word) {
@@ -411,7 +411,7 @@
   }
 
   async function toggleStar(v, on) {
-    // 星號是掛在 DOM 上的事件，有可能在狀態被清掉之後才觸發
+    // 收藏鈕是綁在 DOM 上的事件，可能在狀態被清除後才觸發
     const seg = S.segments ? S.segments[S.current] : null;
     const got = S.analyses.get(S.current);
     const item = Object.assign(
@@ -420,13 +420,13 @@
     );
     const k = starKey(item.type, item.word);
 
-    // 這部影片的收藏清單（完成畫面的數字與「匯出收藏」都看這個）
+    // 這部影片的收藏清單（完成畫面的數字與「匯出收藏」皆以此為準）
     S.starred = S.starred.filter((x) => starKey(x.type, x.word) !== k);
     if (on) S.starred.push(item);
 
     try {
       const book = (await chrome.storage.local.get('wordbook')).wordbook || [];
-      // 只動這部影片的同一個項目，不要影響別部影片收藏的同一個字
+      // 僅更動這部影片的該項目，不影響其他影片收藏的同一個字
       const next = book.filter((b) => !(starKey(b.type, b.word) === k && b.video === item.video));
       if (on) next.push(item);
       await chrome.storage.local.set({ wordbook: next });
@@ -442,7 +442,7 @@
     playSentence: (sent, rate, idx) => {
       const seg = S.segments && S.segments[S.current];
       if (!seg) return;
-      // 優先用按字數比例算出來的時間；萬一算不出來就退回整行
+      // 優先使用依字數比例計算的時間；無法計算時退回整行的時間
       const t = (S.times && S.times[idx]) || sentenceTime(seg, sent);
       playRange(t.start, t.end, rate);
     },
@@ -455,7 +455,7 @@
     },
     start,
     stop,
-    // 字幕根本沒載進來的錯誤，能做的是整個重來一次，而不是重試某一段
+    // 字幕根本未載入的錯誤，可行的處理是整體重新啟動，而非重試某一段
     reload: () => { stop(); start(); },
     continueAnyway,
     openOptions: () => chrome.runtime.sendMessage({ type: 'openOptions' }),
@@ -483,7 +483,7 @@
     S.forceLang = false; S.pendingCues = null;
     S.collected = []; S.starred = []; S.times = null; S.counted = false;
     explains.clear();
-    S.token = Symbol('detached');   // 作廢還在路上的預抓，回來時不會再寫進狀態
+    S.token = Symbol('detached');   // 使進行中的預先整理失效，回傳時不會再寫入狀態
     clearTimeout(aheadTimer);
     Panel.unmount();
   }
@@ -500,8 +500,8 @@
     S.settings = await LY.getSettings();
     S.enabled = S.settings.autoPause !== false;
 
-    // 不是每支影片都是拿來學語言的。預設什麼都不做：不抓字幕、不碰轉錄稿面板、
-    // 不呼叫 API，只掛一個啟動按鈕在旁邊等你按。
+    // 並非每支影片都用於語言學習，因此預設不執行任何動作：不取得字幕、不操作轉錄稿面板、
+    // 不呼叫 API，只顯示一個啟動按鈕，等待使用者按下。
     Panel.mount(handlers);
     renderLauncher();
     if (S.settings.autoStart) start();
@@ -580,7 +580,7 @@
     try {
       S.cues = r.cues;
       S.title = r.title || document.title;
-      // 之前看這部影片時收藏過的項目也算進來，完成畫面的數字和匯出才不會漏
+      // 先前觀看這部影片時收藏的項目也納入，完成畫面的數字與匯出才不會遺漏
       try {
         const book = (await chrome.storage.local.get('wordbook')).wordbook || [];
         S.starred = book.filter((b) => typeof b.url === 'string' && b.url.includes(S.videoId));
@@ -589,14 +589,14 @@
       S.sourceLabel = (r.source === 'player' ? '字幕軌' : r.source === 'panel' ? '轉錄稿面板' : '字幕') +
         (r.langUsed ? ' · ' + r.langUsed + (r.isAuto ? ' 自動產生' : '') : '');
 
-      // 注意：這裡已經不在 start() 的作用域裡，video 要從 S 拿
+      // 注意：此處已不在 start() 的作用域內，video 須從 S 取得
       S.video.addEventListener('timeupdate', onTimeUpdate);
       S.video.addEventListener('seeked', onSeeked);
       S.video.addEventListener('play', onPlay);
       S.video.addEventListener('ended', onEnded);
       arm(S.video.currentTime);
       S.mode = 'watching';
-      ensureAhead();          // 不等 1.2 秒，一載入就開始整理第一段
+      ensureAhead();          // 不等待 1.2 秒，載入後立即開始整理第一段
 
       Panel.render({
         kind: 'ready', total: S.segments.length, sourceLabel: S.sourceLabel, enabled: S.enabled, segment: null
@@ -609,7 +609,7 @@
     }
   }
 
-  // 結束：回到只有啟動按鈕的狀態，之後不會再自己動作
+  // 結束：回到只剩啟動按鈕的狀態，之後不會自行動作
   function stop() {
     const v = S.videoId;
     detach();
@@ -641,7 +641,7 @@
     }
   });
 
-  // 工具列圖示：播放中隨時可以開關
+  // 工具列圖示：觀看中可隨時切換啟用狀態
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || msg.type !== 'toggle') return;
     if (!S.videoId) { sendResponse({ ok: false, reason: 'not-watch-page' }); return; }

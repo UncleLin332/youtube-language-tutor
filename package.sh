@@ -3,8 +3,8 @@
 #
 #   ./package.sh
 #
-# 只收擴充真正會用到的檔案——白名單，不是黑名單。
-# 用排除法的話，哪天多一個資料夾就會默默被包進去。
+# 僅收錄擴充實際會用到的檔案——採白名單，而非黑名單。
+# 若改用排除法，日後新增的資料夾會在無人察覺下被一併打包。
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -12,10 +12,10 @@ cd "$(dirname "$0")"
 VERSION=$(node -p "require('./manifest.json').version")
 OUT="dist/youtube-language-tutor-${VERSION}.zip"
 
-# 先確定東西是好的，壞的不給包
+# 先確認測試全數通過，未通過則不打包
 node test/run.js
 
-# 擴充實際會載入的東西，一個不多一個不少
+# 擴充實際會載入的內容，不多不少
 INCLUDE=(manifest.json icons content background options shared)
 
 for p in "${INCLUDE[@]}"; do
@@ -25,7 +25,7 @@ done
 mkdir -p dist
 rm -f "$OUT"
 
-# -x 排除 macOS 的隱藏檔，它們會被審核當成多餘檔案
+# -x 排除 macOS 的隱藏檔，審查時會被視為多餘檔案
 zip -r -q "$OUT" "${INCLUDE[@]}" -x '*.DS_Store' -x '__MACOSX/*'
 
 echo

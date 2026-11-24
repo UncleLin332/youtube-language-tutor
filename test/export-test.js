@@ -1,8 +1,8 @@
 // 收藏與匯出：載入真正的 content/app.js，只把 chrome / DOM / 面板換成 stub。
 //
-// 存在的理由：這個流程壞過兩次，而且兩次讀程式碼都看不出來——
-// 面板的按鈕呼叫 exportCsv('starred')，但 app.js 裡的 exportCsv 根本沒接那個參數，
-// 結果是「匯出收藏」永遠匯出空的。只有真的跑起來才會發現。
+// 存在的理由：此流程曾兩度失效，且兩次都無法從閱讀程式碼發現——
+// 面板的按鈕呼叫 exportCsv('starred')，但 app.js 的 exportCsv 並未接收該參數，
+// 導致「匯出收藏」永遠匯出空白內容。只有實際執行才會暴露此問題。
 //
 //   node test/export-test.js
 const t = require('./harness');
@@ -154,7 +154,7 @@ const WORD = { type: 'word', word: 'bonjour', lemma: 'bonjour', pos: 'interj.', 
   }
 
   t.section('取消收藏之後');
-  // 前面幾段留下的收藏都清掉，才驗得到「完全沒有收藏」的行為
+  // 清除前面各段留下的收藏，才能驗證「完全沒有收藏」的行為
   for (const item of [WORD, { type: 'fragment', word: "l'air est étouffant" }]) {
     await app.handlers.toggleStar(item, false);
   }

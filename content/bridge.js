@@ -39,9 +39,9 @@
   // 取得某個語言的字幕檔網址。
   //
   // 直接 fetch captionTracks 裡的 baseUrl 會回 200 但空 body——YouTube 現在要求
-  // proof-of-origin 權杖（網址裡的 pot 參數）。但播放器自己抓得到，而它發出的請求
+  // proof-of-origin 權杖（網址裡的 pot 參數）。但播放器本身可以取得，而它發出的請求
   // 會留在標準的 Resource Timing 裡，所以：先裝觀察器 → 叫播放器切到目標語言 →
-  // 攔下它發的網址 → 自己再抓一次。不需要偽造任何東西。
+  // 攔下它發的網址 → 自行再請求一次。此做法只重用播放器已發出的網址，不偽造任何請求。
   async function captionUrl(payload) {
     const want = base(payload && payload.lang);
     const player = document.querySelector('#movie_player');
@@ -63,8 +63,8 @@
     const obs = new PerformanceObserver((list) => {
       for (const e of list.getEntries()) if (e.name.indexOf('/api/timedtext') !== -1) seen.push(e.name);
     });
-    // 自動翻譯（tlang）絕對不能要：那會把法文機器翻成日文之類的，
-    // 看起來正常但語言是錯的。
+    // 不可請求自動翻譯（tlang）：它會將法文機器翻譯成日文等其他語言，
+    // 內容看似正常，但語言並非原文。
     const pick = () => seen.filter((u) => {
       try {
         const q = new URL(u).searchParams;
@@ -87,7 +87,7 @@
       let url = null;
       for (let i = 0; i < 40 && !url; i++) { await sleep(150); url = pick(); }
 
-      // 沒攔到通常是因為本來就選著這條軌，播放器不會重抓：切走再切回來逼它發請求
+      // 未攔截到請求，通常是因為該字幕軌本來就已選取，播放器不會重新請求：先切換到其他軌再切回，以觸發請求
       if (!url) {
         const other = tracks.find((t) => base(t.languageCode) !== want);
         if (other) {
@@ -104,7 +104,7 @@
       return { error: 'failed', message: String(e && e.message) };
     } finally {
       try { obs.disconnect(); } catch (e) { /* ignore */ }
-      // 一定要還原使用者原本的字幕設定，不能擅自把字幕開著
+      // 務必還原使用者原本的字幕設定，不可擅自保持字幕開啟
       try { player.setOption('captions', 'track', previous || {}); } catch (e) { /* ignore */ }
     }
   }

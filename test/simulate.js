@@ -32,7 +32,7 @@
     onChanged: { addListener: () => {} }
   };
 
-  // 把一行字幕切成兩句，好讓「一行多句」的時間分配邏輯真的被走到
+  // 將一行字幕切成兩句，使「一行多句」的時間分配邏輯確實被執行到
   function splitLine(text) {
     const w = text.split(' ');
     if (w.length < 4) return [text];
@@ -82,7 +82,7 @@
     (0, eval)(await res.text());
   }
 
-  // content script 的 CSS 是由 manifest 注入的，模擬時要自己補
+  // content script 的 CSS 是由 manifest 注入的，模擬時須自行補上
   const css = await (await fetch(BASE + '/content/panel.css')).text();
   const style = document.createElement('style');
   style.textContent = css;

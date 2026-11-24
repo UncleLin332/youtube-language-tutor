@@ -117,7 +117,7 @@ async function callAnthropic(settings, job) {
     return fetchWithTimeout(ANTHROPIC_URL, { method: 'POST', headers, body: JSON.stringify(body(opt)) });
   }
 
-  // 先用最完整的形式；若這個帳號／模型不吃某個參數，逐步退回，不要整個壞掉。
+  // 先以最完整的形式請求；若該帳號或模型不支援某個參數，逐步退回，避免整體失敗。
   const opt = { fallback: true, structured: true };
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await send(opt);
@@ -164,8 +164,8 @@ async function callGemini(settings, job) {
         'content-type': 'application/json',
         'x-goog-api-key': settings.apiKey
         // 不送 Api-Revision：2026/05/26 起 steps[] 已是預設格式（舊的 outputs[] 在 6/8 移除），
-        // 而且 Google 的 CORS 不放行這個標頭，送了會讓一般網頁完全打不通（擴充的
-        // service worker 有 host_permissions 不受影響，但測試台和自架 proxy 都會死在預檢）。
+        // 而且 Google 的 CORS 不放行這個標頭，送出後在一般網頁環境會無法連線（擴充的
+        // service worker 具備 host_permissions 故不受影響，但測試頁與自架代理會在 CORS 預檢階段失敗）。
         // readGemini() 兩種格式都認，所以不釘也安全。
       },
       body: JSON.stringify(body(opt))
@@ -206,7 +206,7 @@ class ApiError extends Error {
   }
 }
 
-// 這些是「等一下就會好」的暫時性失敗：負載過高、速率限制、後端抽風
+// 以下為暫時性失敗，稍後重試即可恢復：負載過高、速率限制、後端異常
 const RETRYABLE = new Set([408, 429, 500, 502, 503, 504, 529]);
 
 function apiError(txt, status, provider) {
@@ -220,7 +220,7 @@ function apiError(txt, status, provider) {
   if (status === 404 && provider === 'gemini') return new ApiError(`找不到模型「${msg}」，請至設定頁切換其他模型。`, status, false);
   if (status === 429) return new ApiError(`已達 API 速率上限，請稍後再試。（${String(msg).slice(0, 160)}）`, status, true);
   if (status === 503 || status === 529) {
-    // 保留原文：哪一個模型在忙、是不是真的負載問題，都要靠它判斷
+    // 保留原始訊息：用於判斷是哪個模型忙碌、是否確為負載問題
     return new ApiError(`目前模型負載過高，建議稍後再試或切換模型。（${String(msg).slice(0, 160)}）`, status, true);
   }
   return new ApiError(`API 錯誤 ${status}：${String(msg).slice(0, 260)}`, status, retry);
@@ -228,7 +228,7 @@ function apiError(txt, status, provider) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// 沒有逾時的 fetch 會永遠掛著：面板會卡在「正在整理…」，使用者既看不到錯誤也按不到重試。
+// 未設逾時的 fetch 可能無限期等待：面板會停在「正在整理…」，使用者既看不到錯誤，也無法重試。
 const REQUEST_TIMEOUT_MS = 45000;
 
 async function fetchWithTimeout(url, init) {
@@ -271,7 +271,7 @@ async function callModel(settings, job, onProgress) {
     } catch (e) {
       last = e;
       if (!e || !e.retryable || attempt === MAX_ATTEMPTS) break;
-      // 指數退避＋一點隨機，避免和其他請求擠在同一刻重試
+      // 指數退避加上隨機抖動，避免與其他請求在同一時間重試
       const waitMs = Math.round(1200 * Math.pow(2, attempt - 1) + Math.random() * 400);
       notify({ phase: 'retry', attempt, max: MAX_ATTEMPTS, waitMs, reason: e.message });
       await sleep(waitMs);

@@ -28,7 +28,7 @@ async function load() {
   const hasStorage = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
   const got = hasStorage ? await chrome.storage.local.get(['settings', 'wordbook']) : {};
   const s = Object.assign({}, DEFAULTS, got.settings || {});
-  // 舊版只有單一 apiKey / model 欄位
+  // 舊版僅有單一 apiKey / model 欄位
   if (got.settings && got.settings.apiKey && !s.anthropicKey) s.anthropicKey = got.settings.apiKey;
   if (got.settings && /^claude/.test(got.settings.model || '')) s.anthropicModel = got.settings.model;
   $('provider').value = s.provider;

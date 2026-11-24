@@ -43,7 +43,7 @@ try {
   const refs = [];
   for (const cs of m.content_scripts || []) refs.push(...(cs.js || []), ...(cs.css || []));
   refs.push(m.background.service_worker, m.options_ui.page);
-  // 圖示也要檢查：manifest 指到不存在的圖，Chrome 是整包載入失敗，不是只少一張圖。
+  // 圖示也須檢查：manifest 指向不存在的檔案時，Chrome 會讓整個套件載入失敗，而非僅缺少一張圖示。
   refs.push(...Object.values(m.icons || {}), ...Object.values((m.action || {}).default_icon || {}));
   const missing = refs.filter((p) => !fs.existsSync(path.join(ROOT, p)));
   if (missing.length) { problems.push('manifest'); console.log('  ❌ 找不到：' + missing.join(', ')); }

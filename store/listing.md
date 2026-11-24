@@ -1,7 +1,7 @@
 # Chrome Web Store 上架用文案
 
-送審時把這份文件裡的欄位逐一貼進開發者後台。改了程式之後如果資料處理方式有變，
-記得回來同步這份文件與 [`../PRIVACY.md`](../PRIVACY.md)。
+本文件整理 Chrome Web Store 開發者後台各欄位應填入的內容，送審時依序貼入。
+若程式的資料處理方式有變動，須同步更新本文件與 [`../PRIVACY.md`](../PRIVACY.md)。
 
 ---
 
@@ -13,10 +13,9 @@
 Language Tutor in YouTube
 ```
 
-> 名稱**不能以 YouTube 開頭**。YouTube 的品牌規範寫得很明確：應用程式名稱裡不能含
-> YouTube 或其變體（例如不能叫「YouTube for Kids」），但可以在描述文字裡說明
-> 「這是給 YouTube 用的工具」。所以 YouTube 放在後面當描述，不放在前面當品牌。
-> 以後想改名的話這條還是要遵守。
+> 名稱**不得以 YouTube 開頭**。YouTube 的品牌規範禁止應用程式名稱含有 YouTube 或其變體
+> （例如「YouTube for Kids」），但允許在描述文字中說明「適用於 YouTube 的工具」。
+> 因此名稱將 YouTube 置於後段作為說明，而非作為品牌開頭。日後更名亦須遵守此規範。
 
 **簡短說明**（132 字元內，與 `manifest.json` 的 `description` 一致）
 
@@ -24,7 +23,7 @@ Language Tutor in YouTube
 觀看 YouTube 時自動分段暫停，整理單字與片語並帶你逐句複習。
 ```
 
-**詳細說明**（已整合新版強效開頭、統一 Anki 匯出、圖文申請教學與精簡設定說明，可直接複製貼入後台「說明 *」）
+**詳細說明**（可直接貼入後台「說明 *」欄位）
 
 ```
 看 YouTube 學外語時，不必再邊聽邊查字典打斷節奏——先完整聽完一段，再一次學完重點。
@@ -41,10 +40,10 @@ Language Tutor in YouTube
 
 ■ 使用前請注意
 
-・需填入自己的 AI API Key（Google Gemini 有免費額度，或選 Anthropic Claude；設定頁內建圖文步驟教學，新手也能輕鬆完成）。本擴充不經手也不加收費用，分析結果亦會快取於本機，重看同一段不會重複付費。
+・需填入自己的 AI API Key（Google Gemini 有免費額度，或選 Anthropic Claude；設定頁內建圖文步驟教學）。本擴充不經手費用，亦不額外收費；分析結果會快取於本機，重看同一段不會重複付費。
 ・影片需有字幕（支援 YouTube 自動產生字幕）。
 ・支援十種語言：法文、英文、日文、韓文、西班牙文、德文、義大利文、葡萄牙文、中文、俄文，會自動匹配你設定的學習語言字幕。
-・不會擅自執行：開啟影片預設保持靜止，按下「▶ 開始學習這部影片」或點擊工具列圖示才會開始。
+・預設不自動執行：必須按下「▶ 開始學習這部影片」或點擊工具列圖示，才會開始讀取字幕與呼叫 API。
 
 ■ 隱私承諾
 
@@ -54,12 +53,12 @@ Language Tutor in YouTube
 
 ■ 支持開發
 
-本擴充免費、無廣告、不收集資料。如果這個工具曾幫你聽懂一段外語影片，歡迎請河童喝杯咖啡支持我們推進開發：
+本擴充免費、無廣告、不收集資料。如果這個工具曾幫你聽懂一段外語影片，歡迎請河童喝杯咖啡，支持後續開發：
 https://ko-fi.com/kappa46122
 ```
 
-> 贊助連結放在詳細說明的最後面，不要放在開頭——商店列表只會先顯示前幾行，
-> 開頭就要錢會直接影響安裝率。設定頁裡的那顆按鈕同理，放在最底下。
+> 贊助連結置於詳細說明末段，不置於開頭：商店列表僅先顯示前幾行，開頭出現贊助訊息可能影響安裝意願。
+> 設定頁中的贊助區塊同樣置於頁面下方。
 
 **類別**：教育（Education）
 **語言**：繁體中文
@@ -68,13 +67,12 @@ https://ko-fi.com/kappa46122
 
 | 欄位 | 填什麼 |
 |---|---|
-| 官方網址 | **留空**。這一欄要的是在 Google Search Console 驗證過所有權的網域，不是隨便一個網址。欄位下面寫「找不到已註冊的網址」就是這個意思。GitHub 不是你的網域，驗不了 |
+| 官方網址 | **留空**。此欄須填入已在 Google Search Console 驗證所有權的網域；GitHub 網址無法驗證所有權，故不適用（欄位下方顯示「找不到已註冊的網址」即為此意） |
 | 首頁網址 | `https://github.com/UncleLin332/youtube-language-tutor` |
 | 支援網址 | `https://github.com/UncleLin332/youtube-language-tutor/issues` |
 | 成人內容 | 關 |
 
-支援網址指到 issues 而不是 repo 首頁——使用者點「支援」是遇到問題要回報，
-直接到開 issue 的地方，比丟到首頁讓他自己找省一步。
+支援網址指向 issues 而非 repo 首頁：使用者點選「支援」多半是要回報問題，直接導向 issue 頁面可少一步操作。
 
 ---
 
@@ -86,18 +84,20 @@ https://ko-fi.com/kappa46122
 在 YouTube 影片頁上自動分段暫停，並整理該段字幕中的單字、片語與文法，協助使用者學習外語。
 ```
 
-**權限理由**（每一項都要填，照抄即可）
+**權限理由**（每一項皆須填寫，可直接使用下列文字）
 
 | 欄位 | 填什麼 |
 |---|---|
 | `storage` | 儲存使用者的設定（AI 供應商、API key、學習語言）與收藏的生字本。沒有這個權限，使用者每次開啟瀏覽器都要重新設定，收藏的單字也無法跨影片保存。 |
-| `unlimitedStorage` | 每段字幕的分析結果會快取在本機，讓使用者重看同一部影片時不必重複呼叫付費 API。長時間使用後快取會超過 `storage.local` 的預設 10MB 上限，因此需要此權限。擴充內建自動清理機制，只保留最近的快取。 |
+| `unlimitedStorage` | 每段字幕的分析結果會快取在本機，讓使用者重看同一部影片時不必重複呼叫付費 API。長時間使用後快取會超過 `storage.local` 的預設 10MB 上限，因此需要此權限。使用者可在設定頁一鍵清除快取。 |
 | 主機權限 `https://api.anthropic.com/*` | 將字幕內容送往 Anthropic 的 Claude API 進行分析，使用的是使用者自己填入的 API key。內容指令碼受 CORS 限制無法直接呼叫，因此請求由 service worker 發出。 |
 | 主機權限 `https://generativelanguage.googleapis.com/*` | 同上，供使用者選擇 Google Gemini 作為分析供應商時使用。兩者擇一，不會同時呼叫。 |
 | 內容指令碼 `*://www.youtube.com/*` | 在 YouTube 影片頁插入學習面板、取得使用者所學語言的字幕軌、並控制影片的暫停與單句重播。字幕是透過 YouTube 自己的播放器 API 切換到目標語言後取得的，使用者原本的字幕設定會在讀取完畢後還原。<br><br>比對範圍必須涵蓋整個 `www.youtube.com` 而非只有 `/watch`，因為 YouTube 是單頁應用程式：使用者從首頁點進影片時不會重新載入頁面，若只在 `/watch` 注入，指令碼就不會被載入。擴充只在 `/watch` 頁面上實際動作，其餘頁面不做任何事。 |
 
-> **後台只有一個「要求網站存取權限的理由」欄位**，上面三個主機相關的列要合成一段貼進去
-> （上限 1000 字）。下面這段是合併版，449 字：
+> 後台僅有一個「要求網站存取權限的理由」欄位，須將上列三個主機相關項目合併為一段填入（上限 1000 字）。
+> 以下為合併版（449 字）：
+>
+> 快取目前僅提供手動清除（設定頁），未實作自動淘汰；日後若新增自動清理，再於 `unlimitedStorage` 一列補述。
 
 ```
 本擴充需要三個網域的存取權，用途各自獨立。
@@ -133,8 +133,8 @@ api.anthropic.com 與 generativelanguage.googleapis.com：把該段字幕文字�
 https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md
 ```
 
-> 送審前先把 repo 設為 public 並確認這個網址用無痕視窗打得開，否則審核會直接卡住。
-> 想要更正式的網址的話，開 GitHub Pages 再換成 `https://unclelin332.github.io/...` 也可以。
+> 送審前須確認 repo 已設為 public，並以無痕視窗確認此網址可正常開啟，否則審查無法進行。
+> 如需更正式的網址，亦可啟用 GitHub Pages 後改用 `https://unclelin332.github.io/...`。
 
 ---
 
@@ -143,26 +143,26 @@ https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md
 | 用途 | 尺寸 | 必要性 | 檔案 |
 |---|---|---|---|
 | 商店圖示 | 128×128 | 必要 | `icons/icon128.png` ✅ |
-| 截圖 | 1280×800 | 至少 1 張，最多 5 張 | `store/screenshots/` ✅ 三張 |
+| 截圖 | 1280×800 | 至少 1 張，最多 5 張 | `store/showcase/` ✅ 五張 |
 | 小宣傳圖 | 440×280 | 必要 | `store/promo-440x280.png` ✅ |
 | 跑馬燈宣傳圖 | 1400×560 | 選填 | `store/promo-1400x560.png` ✅ |
 | 通用宣傳影片 | YouTube 網址 | 選填 | 還沒做 |
 
-宣傳影片那格要的是一支 YouTube 影片網址。做了使用教學影片的話就填這裡——
-那是商店列表上唯一能展示「自動暫停 → 筆記出現 → 收藏 → 匯出」這個流程的地方，
-靜態截圖講不出時間感。等審查通過之後再補，審查期間不要動商店列表。
+宣傳影片欄位須填入 YouTube 影片網址。若製作使用教學影片，可填於此處：這是商店列表中唯一能呈現
+「自動暫停 → 筆記出現 → 收藏 → 匯出」完整流程的位置，靜態截圖無法呈現時間順序。
+建議於審查通過後再補；審查期間更動商店列表會重新排隊。
 
-兩張宣傳圖使用 Nano Banana 生成無雜字的河童插畫底圖（`store/promo-mascot-bg.png`），再由 `store/make-promo.py`
-以演算法排版疊加銳利文字（避免生圖模型自己寫錯字）。
+兩張宣傳圖的底圖為生圖模型產生、不含文字的河童插畫（`store/promo-mascot-bg.png`），
+文字由 `store/make-promo.py` 排版疊加，避免生圖模型自行產生錯誤的文字。
 
 跑馬燈與展示截圖皆規定 **JPEG 或 24 位元 PNG、不能有 alpha 透明層**，所有腳本皆以 `RGB` 模式輸出並經過 assert 檢查。
 
 排版遵守官方素材指引：**避免文字過多**（只有名稱與一行核心賣點）、**縮到一半還要看得懂**、**飽和色彩且少白灰底**，
 且不放 Chrome、YouTube、Anki 商標或假的「Add to Chrome」按鈕。
 
-圖示四個尺寸已經做好（`icons/`），原圖是 `store/icon-source-2000.png`，商店圖示上傳 `icons/icon128.png`。
+圖示的四種尺寸位於 `icons/`，來源為 `store/icon-source-2000.png`，商店圖示上傳 `icons/icon128.png`。
 
-**展示版截圖已經做好五張**（商店上限），位於 `store/showcase/`（並同步於 `dist/上傳用/商店展示版截圖/`），按檔名順序上傳：
+**展示用截圖共五張**（為商店上限），位於 `store/showcase/`，依檔名順序上傳：
 
 | 檔名 | 展示什麼 |
 |---|---|
@@ -172,19 +172,20 @@ https://github.com/UncleLin332/youtube-language-tutor/blob/main/PRIVACY.md
 | `04-逐句複習與翻譯.png` | 逐句重播、`0.75×` 慢速跟讀與聽寫模式（耳機河童徽章） |
 | `05-匯出與圖文設定.png` | 新版 `2.0.0` 圖文 API 申請教學＋完成統計與匯出 Anki／Excel（咖啡河童徽章） |
 
-> 💡 `01`～`04` 的原始截圖位於 `store/screenshots/raw/`，為 `1.0.0` 舊版面板樣式。日後若實機用 `2.0.0` 重拍這 4 張放入 `raw/`，依序執行 `python3 store/make-screenshots.py` 與 `python3 store/make-store-cards.py` 即可自動更新整套 `1280×800` 展示圖。
+> 備註：`01`～`04` 的原始截圖（`store/screenshots/raw/`）為 `1.0.0` 的面板樣式。若以 `2.0.0` 重新拍攝，
+> 放入 `raw/` 後依序執行 `python3 store/make-screenshots.py` 與 `python3 store/make-store-cards.py`，即可更新整套 1280×800 展示圖。
 
 ---
 
 ## 4. 送審前的最後確認
 
 - [x] `node test/run.js` 全綠（114 項測試＋語法＋manifest 檢查全過）
-- [x] 用真實 API key 完整跑過一支影片：啟動 → 暫停 → 筆記出現 → 收藏 → 匯出 ✅ 2026/11
-- [ ] 另一家供應商也切過去跑一次（審核員不會知道你平常只用哪一家）
-- [x] `icons/` 已換成正式圖
+- [x] 以真實 API key 完整執行一支影片：啟動 → 暫停 → 筆記出現 → 收藏 → 匯出（2026/11）
+- [ ] 另一家供應商也實際執行一次（審查人員可能使用任一家供應商測試）
+- [x] `icons/` 為正式圖示
 - [ ] repo 已 public，隱私權政策網址無痕可開
 - [x] `./package.sh` 已產出 `dist/youtube-language-tutor-2.0.0.zip`（白名單打包，不含 `test/`、`.git/`）
-- [ ] 把 `dist/youtube-language-tutor-2.0.0.zip` 解開後以「載入未封裝項目」在 Chrome 實測一次（審核員就是這樣測的）
+- [ ] 將 `dist/youtube-language-tutor-2.0.0.zip` 解壓後，以「載入未封裝項目」在 Chrome 實測一次（審查人員以此方式測試）
 
 ---
 
@@ -235,8 +236,8 @@ https://ko-fi.com/kappa46122
 
 **2.0.0 更新重點（供 GitHub Release 或備忘用）**
 ```
-- 全新精簡側邊面板與設定頁介面，移除冗餘選項，保留最直覺的學習流程
+- 重新設計側邊面板與設定頁，精簡設定項目
 - 設定頁內建 Gemini 與 Claude API Key 互動式圖文申請教學
 - Anki 匯出統一為免設定兩欄格式，支援內建 Basic 牌組直接匯入
-- 新增可愛河童咖啡贊助卡片與摺疊式隱私說明
+- 新增河童咖啡贊助區塊與可摺疊的隱私說明
 ```

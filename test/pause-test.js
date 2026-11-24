@@ -122,7 +122,7 @@ function firstBoundary(app) {
     t.eq(last.kind, 'mismatch', '顯示語言不符的提示');
     t.eq(last.got, '中文', '說出抓到的是什麼語言');
     t.eq(last.want, '日文', '說出設定的是什麼語言');
-    t.eq(app.calls.filter((c) => c.type === 'analyze').length, 0, '沒有白花 API 的錢');
+    t.eq(app.calls.filter((c) => c.type === 'analyze').length, 0, '不會產生多餘的 API 費用');
 
     await app.handlers.continueAnyway();
     await app.settle(60);
@@ -132,8 +132,8 @@ function firstBoundary(app) {
   }
 
   // ---------------------------------------------------------------
-  // 贊助連結只在完成畫面出現，而且要看完幾部之後才出現。第一次就開口要錢，
-  // 使用者連這東西好不好用都還不知道。門檻寫在 app.js 的 SUPPORT_AFTER。
+  // 贊助連結只在完成畫面出現，且須累計看完一定部數後才出現；過早出現會在使用者
+  // 尚未評估工具價值時造成打擾。門檻定義於 app.js 的 SUPPORT_AFTER。
   t.section('贊助連結的出現時機');
   {
     const finish = async (app) => {
@@ -156,7 +156,7 @@ function firstBoundary(app) {
     t.eq(r3.support, true, '第三部看完才顯示');
     t.eq(third.store.finished, 3, '計數接著累加，不是從頭算');
 
-    // 同一部「從頭再看」再看完一次，不應該灌水
+    // 同一部影片重新看完時，不應重複計數
     third.fire('ended', third.video.duration);
     await third.settle();
     t.eq(third.store.finished, 3, '同一部重看完不重複計數');
@@ -169,9 +169,9 @@ function firstBoundary(app) {
   }
 
   // ---------------------------------------------------------------
-  // 回歸測試：字幕載入失敗的錯誤面板，和「這一段整理失敗」的錯誤面板長得一樣，
-  // 以前共用同一組按鈕。但前者根本還沒有 segments，按下去會丟
-  // TypeError: Cannot read properties of null (reading '-1')，而且沒人接。
+  // 回歸測試：字幕載入失敗的錯誤面板，外觀與「這一段整理失敗」的錯誤面板相同，
+  // 過去兩者共用同一組按鈕。但前者尚未有 segments，按下按鈕會拋出
+  // TypeError: Cannot read properties of null (reading '-1')，且未被處理。
   t.section('字幕載入失敗：錯誤面板的按鈕不該去碰不存在的段落');
   {
     const rejections = [];
@@ -187,7 +187,7 @@ function firstBoundary(app) {
     t.eq(r.segment, undefined, '這種錯誤沒有「這一段」，面板要據此換按鈕');
     t.ok(typeof app.handlers.reload === 'function', '有「重新載入字幕」可以接');
 
-    // 每個按鈕各自判定，共用一個變數的話前一顆的錯會污染後一顆
+    // 每個按鈕各自判定；若共用同一個變數，前一個的錯誤會影響後一個
     const press = (fn) => { try { fn(); return null; } catch (e) { return String(e.message || e); } };
     t.eq(press(() => app.handlers.retry()), null, '按「重試」不會丟錯');
     t.eq(press(() => app.handlers.continue()), null, '按「略過這段」不會丟錯');

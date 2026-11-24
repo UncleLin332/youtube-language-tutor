@@ -33,7 +33,7 @@ t.section('切段：完全沒有標點（自動字幕的常態）');
     start: i * 2.5, end: (i + 1) * 2.5, text: 'mot mot mot'
   }));
   const lens = LY.buildSegments(cues, 30).map((s) => s.end - s.start);
-  // 這裡曾經膨脹到 42–51 秒，因為只靠句尾判斷而自動字幕沒有標點
+  // 此處曾膨脹到 42–51 秒，原因是僅憑句尾判斷，而自動字幕沒有標點
   t.ok(Math.max(...lens) <= 30 * 1.35 + 2.5, '沒有膨脹成兩倍長', '最長 ' + Math.max(...lens));
   t.near(lens.reduce((a, b) => a + b, 0) / lens.length, 30, 6, '平均長度接近設定值');
 }
@@ -103,7 +103,7 @@ t.section('句子時間：模型回傳壞資料也不能爆');
 // ------------------------------------------------- 字幕語言檢查
 t.section('字幕語言：抓到的和設定的對不對得上');
 {
-  // transcript.js 需要一點瀏覽器環境才載得進來
+  // transcript.js 需要部分瀏覽器環境才能載入
   globalThis.document = { querySelectorAll: () => [], querySelector: () => null };
   globalThis.window = { addEventListener() {}, postMessage() {} };
   require(t.ROOT + '/content/transcript.js');
@@ -116,13 +116,13 @@ t.section('字幕語言：抓到的和設定的對不對得上');
     ['中文字幕配法文設定', ['大家好，今天我們來聊聊'], 'fr', true],
     ['韓文字幕配日文設定', ['안녕하세요 여러분'], 'ja', true],
     ['中文字幕配中文設定', ['大家好！我是日語教師Yuka'], 'zh', false],
-    ['英文字幕配法文設定', ['Hello everyone welcome back'], 'fr', false]   // 拉丁字母分不出來，不擋
+    ['英文字幕配法文設定', ['Hello everyone welcome back'], 'fr', false]   // 拉丁字母無法區分，不攔阻
   ];
   for (const [name, lines, want, shouldWarn] of cases) {
     const r = LY.checkLanguage(cues(lines), want);
     t.eq(!!r, shouldWarn, name);
   }
-  // 前面幾行剛好全是漢字的日文，不該誤判
+  // 前幾行恰好全為漢字的日文，不應誤判
   const mostlyKanji = cues(['日本語教師', '実用日本語', '美術館商店', 'これはひらがなです']);
   t.eq(LY.checkLanguage(mostlyKanji, 'ja'), null, '前幾行全漢字的日文不會被誤判成中文');
 }

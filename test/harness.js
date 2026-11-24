@@ -1,7 +1,7 @@
 // 測試用的共用工具：斷言，以及把真正的 content script 載進 node 跑的環境。
 //
-// 重點是「載入真正的程式碼」而不是複製一份來測——這個專案已經兩次因為
-// 複製品測過了但真正的程式碼沒接上而出事。
+// 重點是「載入實際的程式碼」，而非複製一份來測——曾兩度發生
+// 副本測試通過、但實際程式碼的串接有誤的情況。
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
@@ -113,7 +113,7 @@ async function createApp(opts) {
     }
   };
 
-  // 允許一個 process 裡建立多個實例：content script 是 IIFE，要清掉 require 快取
+  // 允許一個 process 裡建立多個實例：content script 是 IIFE，須清除 require 快取
   for (const f of ['/content/lib.js', '/shared/anki.js', '/content/segmenter.js',
                    '/content/transcript.js', '/content/app.js']) {
     delete require.cache[require.resolve(ROOT + f)];
@@ -154,11 +154,11 @@ async function createApp(opts) {
 
   require(ROOT + '/content/app.js');
 
-  // route() 是非同步的，handlers 要等它呼叫 Panel.mount 才會有
+  // route() 為非同步，須等其呼叫 Panel.mount 後 handlers 才存在
   for (let i = 0; i < 50 && !handlers; i++) await new Promise((r) => setTimeout(r, 10));
   if (!handlers) throw new Error('app.js 沒有掛上面板，handlers 取不到');
 
-  // 讓測試可以手動推進影片時間
+  // 使測試可以手動推進影片時間
   const fire = (event, t) => {
     if (t != null) video.currentTime = t;
     for (const fn of listeners[event] || []) fn();

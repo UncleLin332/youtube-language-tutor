@@ -1,9 +1,11 @@
 // 取得影片字幕
 //
-// 主要路徑：YouTube 自己的「顯示轉錄稿」面板（2026/11 實測：整份轉錄稿會一次渲染進 DOM，
-//           沒有虛擬捲動，可以直接讀完）。
-// 次要路徑：timedtext baseUrl。注意現在多數影片會回 HTTP 200 但 body 是空的
-//           （需要 PO token），所以只能當退路，而且必須檢查 body 長度。
+// 主要路徑：向播放器取得字幕（見 fetchViaPlayer）。bridge.js 取得播放器自己發出的
+//           timedtext 網址（已帶有 proof-of-origin 權杖），再由此處請求 json3 格式的字幕。
+// 備援路徑：YouTube 的「顯示轉錄稿」面板（2026/11 觀察：整份轉錄稿會一次渲染進 DOM，
+//           沒有虛擬捲動，可直接讀完）。僅在播放器路徑發生暫時性失敗時使用，且語言無法控制。
+// 注意：直接 fetch captionTracks 的 baseUrl，現在多數影片會回傳 HTTP 200 但內容為空
+//       （需要 PO token），因此不採用；任何字幕來源都必須檢查內容長度。
 (() => {
   const LY = globalThis.LY;
 
@@ -53,11 +55,11 @@
   const hasRows = () => (document.querySelectorAll(ROW_SEL).length >= 3 ? true : null);
 
   async function scrapePanel() {
-    // 面板可能本來就開著，或正在載入中：先等一下再決定要不要按按鈕，
-    // 否則「顯示轉錄稿」是 toggle，按下去反而會把它關掉。
+    // 面板可能原本已開啟，或正在載入中：先稍候再決定是否按按鈕，
+    // 否則「顯示轉錄稿」是切換開關，按下去反而會將其關閉。
     if (await LY.waitFor(hasRows, 2500, 300)) return { cues: readRows(), opened: false };
 
-    // 轉錄稿按鈕藏在影片說明區，說明區還沒渲染時按鈕可能不存在，先等一下
+    // 轉錄稿按鈕位於影片說明區，說明區尚未渲染時按鈕可能不存在，需稍候
     const btn = await LY.waitFor(findToggleButton, 6000, 400);
     if (!btn) return { cues: [], opened: false };
 
@@ -75,11 +77,11 @@
     } catch (e) { /* 關不掉就算了，不影響功能 */ }
   }
 
-  // ---- 主要路徑：跟播放器要字幕檔 ----
+  // ---- 主要路徑：向播放器取得字幕檔 ----
   //
-  // captionTracks 裡的 baseUrl 直接 fetch 會回 200 空 body（缺 proof-of-origin 權杖）。
-  // bridge.js 會叫播放器切到目標語言、攔下它自己發的網址再交給我們，那個網址帶著權杖。
-  // 好處是：語言跟著設定走、不用打開 YouTube 的轉錄稿面板、沒有面板的影片也能用。
+  // captionTracks 內的 baseUrl 直接 fetch 會回傳 200 但內容為空（缺少 proof-of-origin 權杖）。
+  // bridge.js 會讓播放器切換到目標語言，攔截其自行發出的網址後交給我們，該網址帶有權杖。
+  // 優點：語言依設定決定、不需開啟 YouTube 的轉錄稿面板、沒有面板的影片也能使用。
   function parseJson3(text) {
     const data = JSON.parse(text);
     const cues = [];
@@ -94,7 +96,7 @@
   }
 
   async function fetchViaPlayer(settings) {
-    // 切軌加上等播放器發請求，會花幾秒，所以等久一點
+    // 切換字幕軌並等待播放器發出請求需要數秒，因此設定較長的等待時間
     const res = await LY.askPage('captionUrl', { lang: settings.targetLang }, 20000);
     if (!res) return { cues: [], reason: 'bridge-timeout' };
     if (res.error) return { cues: [], reason: res.error, available: res.available };
@@ -123,24 +125,24 @@
     return out;
   }
 
-  // 抓到的字幕到底是什麼語言？
+  // 取得的字幕究竟是什麼語言？
   //
-  // YouTube 的轉錄稿面板會依帳號語言挑字幕軌，而新版介面沒有切換語言的選項
-  // （播放器的字幕設定、hl 參數都試過，都改不了面板的語言）。
-  // 所以一支「日本人講給中文觀眾看」的影片，面板給的可能是中文字幕。
-  // 不檢查的話，擴充會把中文當成日文原文送去分析，產出「原文和翻譯都是中文」的結果，
-  // 而且白花 API 的錢。
+  // YouTube 的轉錄稿面板會依帳號語言選擇字幕軌，而新版介面沒有切換語言的選項
+  // （已試過調整播放器的字幕設定與 hl 參數，皆無法改變面板的語言）。
+  // 因此一支「日本人講給中文觀眾看」的影片，面板給的可能是中文字幕。
+  // 若不檢查，擴充會把中文當成日文原文送去分析，產出「原文與翻譯皆為中文」的結果，
+  // 並徒增 API 費用。
   const SCRIPTS = [
     ['ja', /[\u3040-\u309f\u30a0-\u30ff]/, '日文'],      // 假名
     ['ko', /[\uac00-\ud7af]/, '韓文'],
     ['ru', /[\u0400-\u04ff]/, '俄文'],
     ['ar', /[\u0600-\u06ff]/, '阿拉伯文'],
     ['th', /[\u0e00-\u0e7f]/, '泰文'],
-    ['zh', /[\u4e00-\u9fff]/, '中文'],                   // 要排在日文後面：日文也有漢字
+    ['zh', /[\u4e00-\u9fff]/, '中文'],                   // 須排在日文之後：日文也含漢字
     ['latin', /[A-Za-zÀ-ÿ]/, '拉丁字母的語言']
   ];
 
-  // 拉丁字母系的語言彼此分不出來（法文／西班牙文／英文…），一律回 'latin'
+  // 拉丁字母系的語言彼此無法區分（法文／西班牙文／英文…），一律回傳 'latin'
   const LATIN = new Set(['fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'sv', 'id', 'ms', 'vi', 'fil']);
   const scriptOf = (lang) => (LATIN.has(String(lang).toLowerCase().split('-')[0]) ? 'latin'
     : String(lang).toLowerCase().split('-')[0]);
@@ -151,15 +153,15 @@
     return null;
   };
 
-  // 回傳 null 代表沒問題；否則回傳不符的描述
+  // 回傳 null 代表相符；否則回傳不符的描述
   LY.checkLanguage = (cues, targetLang) => {
     const want = scriptOf(targetLang);
     const sample = cues.slice(0, 20).map((c) => c.text).join(' ');
     if (!sample.trim()) return null;
     const got = LY.detectScript(sample);
-    if (!got) return null;                 // 認不出來就不要擋
+    if (!got) return null;                 // 無法辨識時不攔阻
     if (got.code === want) return null;
-    // 日文字幕如果剛好這 20 行全是漢字，會被認成中文——再多看一點
+    // 日文字幕若前 20 行恰好全為漢字，會被誤認為中文——需再多取樣
     if (want === 'ja' && got.code === 'zh') {
       const all = cues.map((c) => c.text).join(' ');
       if (/[\u3040-\u309f\u30a0-\u30ff]/.test(all)) return null;
@@ -185,8 +187,8 @@
       isAuto = viaPlayer.isAuto;
     } else {
       reason = viaPlayer.reason;
-      // 這支影片就是沒有這個語言的字幕：退回去抓面板也只會拿到別的語言，
-      // 不如直接講清楚，也省得去動 YouTube 的面板
+      // 這支影片確實沒有該語言的字幕：退回面板也只會取得其他語言，
+      // 不如直接回報原因，也避免操作 YouTube 的面板
       if (reason !== 'no-track' && reason !== 'no-captions') {
         LY.log('跟播放器要字幕失敗（' + reason + '），改抓轉錄稿面板');
         const panel = await scrapePanel();

@@ -16,7 +16,7 @@
     exportFormat: 'simple'   // Anki 檔的格式：'simple' = 法文/中文兩欄；'fields' = 九個欄位
   };
 
-  // 把設定收斂成背景程序要的那幾個欄位
+  // 將設定整理為背景程序所需的欄位
   LY.resolve = (s) => ({
     provider: s.provider === 'gemini' ? 'gemini' : 'anthropic',
     apiKey: s.provider === 'gemini' ? s.geminiKey : s.anthropicKey,
@@ -33,7 +33,7 @@
   LY.getSettings = async () => {
     const got = await chrome.storage.local.get('settings');
     const s = Object.assign({}, LY.DEFAULTS, got.settings || {});
-    // 舊版只有單一 apiKey / model 欄位，沿用過來
+    // 舊版僅有單一 apiKey / model 欄位，沿用其值
     if (got.settings && got.settings.apiKey && !s.anthropicKey) s.anthropicKey = got.settings.apiKey;
     if (got.settings && got.settings.model && /^claude/.test(got.settings.model)) s.anthropicModel = got.settings.model;
     return s;
@@ -72,7 +72,7 @@
     }
   };
 
-  // 向主世界的 bridge.js 問資料
+  // 向主世界的 bridge.js 查詢資料
   LY.askPage = (kind, payload, timeout) => new Promise((resolve) => {
     const id = 'ly_' + Math.random().toString(36).slice(2);
     const timer = setTimeout(() => { window.removeEventListener('message', on); resolve(null); },
