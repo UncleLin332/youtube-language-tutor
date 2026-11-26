@@ -6,62 +6,78 @@
 // 共用同一份程式碼，測試台測到的就是擴充實際會跑的路徑。
 
 // ---------- 共用的輸出結構 ----------
-const SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['sentences', 'vocab', 'phrases', 'notes'],
-  properties: {
-    sentences: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['text', 'translation', 'start_line', 'end_line'],
-        properties: {
-          text: { type: 'string', description: '修正標點後的原文句子' },
-          translation: { type: 'string' },
-          start_line: { type: 'integer' },
-          end_line: { type: 'integer' }
+//
+// reading（假名讀音）僅在日文時加入 schema：其他語言沒有此需求，
+// 多一個欄位即代表每段都多付一次 token。
+function schemaFor(ja) {
+  const schema = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['sentences', 'vocab', 'phrases', 'notes'],
+    properties: {
+      sentences: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['text', 'translation', 'start_line', 'end_line'],
+          properties: {
+            text: { type: 'string', description: '修正標點後的原文句子' },
+            translation: { type: 'string' },
+            start_line: { type: 'integer' },
+            end_line: { type: 'integer' }
+          }
         }
-      }
-    },
-    vocab: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['word', 'lemma', 'pos', 'meaning', 'note'],
-        properties: {
-          word: { type: 'string', description: '影片中出現的實際型態' },
-          lemma: { type: 'string', description: '原形／字典型' },
-          pos: { type: 'string', description: '詞性縮寫，例如 n.m. / v. / adj.' },
-          meaning: { type: 'string' },
-          note: { type: 'string', description: '用法、變化或發音提醒；沒有就空字串' }
+      },
+      vocab: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['word', 'lemma', 'pos', 'meaning', 'note'],
+          properties: {
+            word: { type: 'string', description: '影片中出現的實際型態' },
+            lemma: { type: 'string', description: '原形／字典型' },
+            pos: { type: 'string', description: '詞性縮寫，例如 n.m. / v. / adj.' },
+            meaning: { type: 'string' },
+            note: { type: 'string', description: '用法、變化或發音提醒；沒有就空字串' }
+          }
         }
-      }
-    },
-    phrases: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['phrase', 'meaning', 'note'],
-        properties: {
-          phrase: { type: 'string' },
-          meaning: { type: 'string' },
-          note: { type: 'string', description: '字面意思、語氣或使用場合；沒有就空字串' }
+      },
+      phrases: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['phrase', 'meaning', 'note'],
+          properties: {
+            phrase: { type: 'string' },
+            meaning: { type: 'string' },
+            note: { type: 'string', description: '字面意思、語氣或使用場合；沒有就空字串' }
+          }
         }
+      },
+      notes: {
+        type: 'array',
+        description: '這段值得注意的文法或發音重點，0 到 2 則',
+        items: { type: 'string' }
       }
-    },
-    notes: {
-      type: 'array',
-      description: '這段值得注意的文法或發音重點，0 到 2 則',
-      items: { type: 'string' }
+    }
+  };
+
+  if (ja) {
+    const desc = '整串的假名讀音：漢字換成平假名，假名與外來語照原樣抄一次';
+    for (const [key, where] of [['sentences', 'text'], ['vocab', 'word'], ['phrases', 'phrase']]) {
+      const item = schema.properties[key].items;
+      item.required.push('reading');
+      item.properties.reading = { type: 'string', description: desc + '（對應 ' + where + '）' };
     }
   }
-};
 
-function instructions(langName, nativeLang) {
+  return schema;
+}
+
+function instructions(langName, nativeLang, ja) {
   return [
     `你是一位${langName}老師，學生的母語是${nativeLang}。學生正在看一段${langName}影片，你要幫他整理這一小段的學習重點。`,
     '',
@@ -74,8 +90,16 @@ function instructions(langName, nativeLang) {
     '4. phrases：慣用語、固定搭配、口語縮讀與省略（例如法文的 j\'sais pas、y\'a、t\'es）。沒有就給空陣列。',
     `5. 所有解釋都用${nativeLang}，盡量精簡，一個解釋不超過 25 個字。`,
     '6. notes：這段最值得注意的文法或發音點，最多 2 則；沒有特別的就給空陣列。',
-    '7. 只根據提供的字幕內容作答，不要臆測影片其他部分。'
-  ].join('\n');
+    '7. 只根據提供的字幕內容作答，不要臆測影片其他部分。',
+    // 讀音用於標註假名，面板會將其切開並對齊至各漢字上方，
+    // 因此非漢字的部分必須照抄，否則無法對齊，只能整個詞標註在一起。
+    ja ? [
+      '8. reading：sentences、vocab、phrases 每一筆都要填假名讀音。',
+      '   漢字一律換成平假名，原本就是假名、外來語（片假名）、英數字的部分照原樣抄一次，不要改寫也不要加空白。',
+      '   例：「速すぎて」→「はやすぎて」、「注文の仕方」→「ちゅうもんのしかた」、',
+      '   「店員さんの日本語が速くてフォーマルです」→「てんいんさんのにほんごがはやくてフォーマルです」。'
+    ].join('\n') : ''
+  ].filter(Boolean).join('\n');
 }
 
 function transcriptBlock(lines) {
@@ -287,15 +311,20 @@ async function callModel(settings, job, onProgress) {
 
 // ---------- 任務：整理一個段落 ----------
 function analyzeJob(settings, lines) {
+  const ja = settings.targetLang === 'ja';
   return {
-    system: instructions(settings.langName, settings.nativeLang),
+    system: instructions(settings.langName, settings.nativeLang, ja),
     user: transcriptBlock(lines),
-    schema: SCHEMA,
+    schema: schemaFor(ja),
     normalize: (p) => {
       p.sentences = p.sentences || [];
       p.vocab = p.vocab || [];
       p.phrases = p.phrases || [];
       p.notes = p.notes || [];
+      // 模型偶爾會漏填 reading；面板只接受字串，統一補為空字串以免四處防呆
+      for (const list of [p.sentences, p.vocab, p.phrases]) {
+        for (const it of list) if (typeof it.reading !== 'string') it.reading = '';
+      }
       return p;
     }
   };
@@ -356,4 +385,4 @@ function explainJob(settings, p) {
   };
 }
 
-export { SCHEMA, EXPLAIN_SCHEMA, callModel, analyzeJob, explainJob, apiError, PROVIDERS };
+export { schemaFor, EXPLAIN_SCHEMA, callModel, analyzeJob, explainJob, apiError, PROVIDERS };

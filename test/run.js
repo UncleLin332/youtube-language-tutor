@@ -54,7 +54,7 @@ try {
 }
 
 // ---- 測試 ----
-for (const f of ['segment-test.js', 'pause-test.js', 'export-test.js']) {
+for (const f of ['segment-test.js', 'pause-test.js', 'export-test.js', 'furigana-test.js']) {
   console.log(`\n${'─'.repeat(50)}\n執行 test/${f}`);
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { cwd: ROOT, stdio: 'inherit' });
   if (r.status !== 0) problems.push(f);

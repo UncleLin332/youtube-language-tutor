@@ -18,6 +18,7 @@
 <div class="col"><h2>播放中狀態</h2><div id="w"></div></div>
 <div class="col"><h2>完成畫面</h2><div id="a"></div></div>
 <div class="col"><h2>段落複習畫面</h2><div id="b"></div></div>
+<div class="col"><h2>日文：假名標註＋發音</h2><div id="j"></div></div>
 <div class="col"><h2>錯誤：字幕載入失敗</h2><div id="d"></div></div>
 <div class="col"><h2>錯誤：這一段整理失敗</h2><div id="e"></div></div>
 
@@ -26,6 +27,7 @@
 <script src="../content/panel.js"></script>
 <script>
 const P = LY.Panel;
+let previewLang = 'fr';
 // 用記憶體模擬 app 端的收藏狀態，才能驗證「取消收藏」與「重繪後狀態還在」
 const starred = new Set();
 const skey = (t, w) => t + '\u0000' + w;
@@ -33,6 +35,8 @@ const handlers = {
   restart:()=>{}, exportCsv:()=>{}, continue:()=>{}, retry:()=>{}, reload:()=>{},
   replaySegment:()=>{}, playSentence:()=>{}, toggleEnabled:()=>{}, openOptions:()=>{},
   isStarred: (t, w) => starred.has(skey(t, w)),
+  // 發音鈕使用實際的實作，預覽頁按下即可聽到，也才驗得出語音是否可用
+  speak: (text) => LY.speak(text, previewLang),
   explainFragment: (info) => {
     window.__lastInfo = info;
     P.showExplain(info, { loading: true });
@@ -92,6 +96,35 @@ renderInto(document.getElementById('b'), {
            "j'étais de garde 使用未完成過去式 (Imparfait) 描述當時持續的狀態。"]
   }
 });
+
+// 日文：假名須切開並對齊至各漢字上方；外來語與原本就是假名的部分不標註
+previewLang = 'ja';
+renderInto(document.getElementById('j'), {
+  kind:'result', enabled:true, total:12, cached:false,
+  segment:{ index:1, start:30, end:60 },
+  data:{
+    sentences:[
+      {text:'日本のお店で自然な注文の仕方がわからない。',
+       reading:'にほんのおみせでしぜんなちゅうもんのしかたがわからない。',
+       translation:'我不知道在日本的店裡怎麼自然地點餐。', start_line:0, end_line:1},
+      {text:'店員さんの日本語が速すぎて、フォーマルすぎて難しい。',
+       reading:'てんいんさんのにほんごがはやすぎて、フォーマルすぎてむずかしい。',
+       translation:'店員說的日語太快，又太正式，很難聽懂。', start_line:1, end_line:2},
+      {text:'この動画はそんな人のためのレッスンです。',
+       reading:'このどうがはそんなひとのためのレッスンです。',
+       translation:'這支影片就是為了這樣的人準備的課程。', start_line:2, end_line:3}
+    ],
+    vocab:[
+      {word:'仕方', reading:'しかた', lemma:'仕方', pos:'n.', meaning:'方法、做法', note:'常以「〜の仕方」表示做某事的方式'},
+      {word:'速すぎて', reading:'はやすぎて', lemma:'速い', pos:'adj.', meaning:'快的', note:'「〜すぎる」表示過度'},
+      {word:'フォーマル', reading:'フォーマル', lemma:'フォーマル', pos:'adj.', meaning:'正式的、禮儀性的', note:'外來語，與口語相對'},
+      {word:'練習します', reading:'れんしゅうします', lemma:'練習する', pos:'v.', meaning:'練習', note:'「〜ます」為敬體'}
+    ],
+    phrases:[{phrase:'注文の仕方', reading:'ちゅうもんのしかた', meaning:'點餐的方式', note:'名詞＋の＋仕方'}],
+    notes:['「〜すぎる」接在形容詞語幹後面，表示程度過頭。']
+  }
+});
+previewLang = 'fr';
 
 // 這兩個都是 kind:'error'，但能做的事不一樣：
 // 沒有 segment = 字幕還沒載進來，只能整個重來；有 segment = 可以重試這段或跳過

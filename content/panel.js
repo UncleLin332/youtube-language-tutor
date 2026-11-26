@@ -176,13 +176,15 @@
     if (node && node.nodeType === 3) node = node.parentNode;
     const fr = node && node.closest && node.closest('.ly-fr');
     if (!fr || !P.root || !P.root.contains(fr)) return null;
+    // 有假名標註時 textContent 會混入假名，一律以 dataset.plain 保存的原文為準
+    const plain = (fr.dataset && fr.dataset.plain) || fr.textContent;
     // 若整句都被選取，使用原本的句子收藏即可
-    if (text === fr.textContent.trim()) return null;
+    if (text === plain.trim()) return null;
 
     const li = fr.closest('.ly-sent');
     return {
       text,
-      sentence: fr.textContent.trim(),
+      sentence: plain.trim(),
       sentenceZh: li && li.querySelector('.ly-zh') ? li.querySelector('.ly-zh').textContent.trim() : '',
       rect: sel.getRangeAt(0).getBoundingClientRect(),
       li
@@ -246,6 +248,34 @@
     info.li.insertAdjacentElement('afterend', box);
   };
 
+  // 日文假名標註。模型只回傳整串讀音，由 LY.furigana 切開並對齊至各漢字上方；
+  // 對不上時：單字退回整個詞標註一次，句子則不標註（整句掛一個 rt 反而更難閱讀）。
+  function ruby(text, reading, whole) {
+    const t = String(text || '');
+    if (!reading || !LY.hasKanji(t)) return document.createTextNode(t);
+
+    const parts = LY.furigana(t, reading);
+    if (!parts) return whole ? el('ruby', {}, [t, el('rt', { text: reading })]) : document.createTextNode(t);
+
+    const frag = document.createDocumentFragment();
+    for (const p of parts) {
+      frag.appendChild(p.r ? el('ruby', {}, [p.t, el('rt', { text: p.r })]) : document.createTextNode(p.t));
+    }
+    return frag;
+  }
+
+  // 單字／片語的發音鈕。句子不需要：點擊句子即可跳回影片聽原聲，
+  // 真人語調優於合成音；單字沒有各自的時間點，才需要合成音。
+  function speakBtn(text) {
+    if (!P.on.speak) return null;
+    const b = el('button', { class: 'ly-mini ly-speak', text: '🔊', title: '聽發音（合成音）' });
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (P.on.speak(text) === false) b.title = '此電腦未安裝此語言的語音';
+    });
+    return b;
+  }
+
   // 收藏鈕。狀態一律向 app 查詢，不可僅記錄在 DOM 的 class 上——
   // 面板每次重繪（例如切換「顯示翻譯」）都會重置 class。
   function starBtn(item, extraClass) {
@@ -269,7 +299,10 @@
   function sentenceList(vm) {
     const list = el('ol', { class: 'ly-sents' });
     (vm.data.sentences || []).forEach((s, i) => {
-      const fr = el('div', { class: 'ly-fr', text: s.text });
+      // 另存一份原文：加上 ruby 之後 textContent 會混入假名，
+      // 框選解說與「是否整句被選取」的判斷都必須使用不含假名的原文
+      const fr = el('div', { class: 'ly-fr' }, [ruby(s.text, s.reading, false)]);
+      fr.dataset.plain = s.text;
       const zh = el('div', { class: 'ly-zh', text: s.translation || '' });
       const main = el('div', { class: 'ly-sent-main' }, [fr, zh]);
       const tools = el('div', { class: 'ly-sent-tools' }, [
@@ -298,10 +331,11 @@
     const ul = el('ul', { class: 'ly-cards' });
     (vm.data.vocab || []).forEach((v) => {
       const head = el('div', { class: 'ly-card-head' }, [
-        el('b', { class: 'ly-word', text: v.word }),
+        el('b', { class: 'ly-word' }, [ruby(v.word, v.reading, true)]),
         v.lemma && v.lemma !== v.word ? el('span', { class: 'ly-lemma', text: '← ' + v.lemma }) : null,
         v.pos ? el('i', { class: 'ly-pos', text: v.pos }) : null,
         el('span', { class: 'ly-spacer' }),
+        speakBtn(v.word),
         starBtn(Object.assign({ type: 'word' }, v))
       ]);
       const body = el('div', { class: 'ly-mean', text: v.meaning || '' });
@@ -316,8 +350,9 @@
     (vm.data.phrases || []).forEach((p) => {
       ul.appendChild(el('li', { class: 'ly-card' }, [
         el('div', { class: 'ly-card-head' }, [
-          el('b', { class: 'ly-word', text: p.phrase }),
+          el('b', { class: 'ly-word' }, [ruby(p.phrase, p.reading, true)]),
           el('span', { class: 'ly-spacer' }),
+          speakBtn(p.phrase),
           starBtn({ type: 'phrase', word: p.phrase, lemma: '', pos: '', meaning: p.meaning, note: p.note })
         ]),
         el('div', { class: 'ly-mean', text: p.meaning || '' }),

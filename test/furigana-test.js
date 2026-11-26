@@ -1,0 +1,71 @@
+// 日文假名標註與語音挑選
+//
+// 模型只回傳「整串的假名讀音」，切開並對齊至各漢字上方的是 LY.furigana。
+// 此處載入實際的實作（content/lib.js），而非另寫副本。
+//
+//   node test/furigana-test.js
+const { ok, eq, section, finish, ROOT } = require('./harness');
+
+require(ROOT + '/content/lib.js');
+
+// 將結果印成 漢字(かな) 的形式，正確與否一眼可辨
+const show = (parts) => (parts ? parts.map((p) => (p.r ? `${p.t}(${p.r})` : p.t)).join('') : null);
+const align = (text, reading) => show(LY.furigana(text, reading));
+
+section('整句標註');
+eq(align('日本のお店で自然な注文の仕方がわからない。',
+         'にほんのおみせでしぜんなちゅうもんのしかたがわからない。'),
+   '日本(にほん)のお店(みせ)で自然(しぜん)な注文(ちゅうもん)の仕方(しかた)がわからない。',
+   '送假名當錨點，漢字各自拿到自己的讀音');
+
+eq(align('店員さんの日本語が速すぎて、フォーマルすぎて難しい。',
+         'てんいんさんのにほんごがはやすぎて、フォーマルすぎてむずかしい。'),
+   '店員(てんいん)さんの日本語(にほんご)が速(はや)すぎて、フォーマルすぎて難(むずか)しい。',
+   '片假名的部分不標，照原樣留著');
+
+eq(align('お店に入るところから注文まで、自然に会話ができるように練習します。',
+         'おみせにはいるところからちゅうもんまで、しぜんにかいわができるようにれんしゅうします。'),
+   'お店(みせ)に入(はい)るところから注文(ちゅうもん)まで、自然(しぜん)に会話(かいわ)ができるように練習(れんしゅう)します。',
+   '長句也對得起來');
+
+section('單字與送假名');
+eq(align('速すぎて', 'はやすぎて'), '速(はや)すぎて', '送假名留在漢字外面');
+eq(align('仕方', 'しかた'), '仕方(しかた)', '整個詞都是漢字時標在一起');
+eq(align('練習します', 'れんしゅうします'), '練習(れんしゅう)します', '動詞語尾不標');
+eq(align('今日は', 'きょうは'), '今日(きょう)は', '熟字訓標在整個詞上');
+
+section('標點與寫法的小差異');
+eq(align('注文の仕方。', 'ちゅうもんのしかた'), '注文(ちゅうもん)の仕方(しかた)。',
+   '讀音漏了句號也要能對齊');
+eq(align('日本語　を', 'にほんごを'), '日本語(にほんご)　を', '讀音沒有空白也要能對齊');
+eq(align('コーヒーを注文', 'こーひーをちゅうもん'), 'コーヒーを注文(ちゅうもん)',
+   '讀音把片假名寫成平假名也認得');
+
+section('無法對齊時回傳 null，由上層決定如何退讓');
+ok(LY.furigana('フォーマル', 'フォーマル') === null, '不含漢字則不標註');
+ok(LY.furigana('注文', '') === null, '沒有讀音則不標註');
+ok(LY.furigana('店員さんの日本語', 'まったくちがうよみ') === null, '讀音與原文不符時不強行標註');
+ok(LY.furigana('注文の仕方です', 'ちゅうもんのしかた') === null, '讀音短少一截亦視為無法對齊');
+// 已知限制：結尾恰好是漢字時，多出來的讀音會被該漢字吸收
+// （「注文の仕方」配上「ちゅうもんのしかたです」會標成 仕方(しかたです)）。
+// 沒有字典即無從分辨，且代價僅是多顯示幾個假名。
+ok(LY.hasKanji('フォーマル') === false && LY.hasKanji('仕方') === true, 'hasKanji 能判斷是否含漢字');
+
+section('發音：挑語音');
+const VOICES = [
+  { lang: 'en-US', localService: true, name: 'Samantha' },
+  { lang: 'ja-JP', localService: true, name: 'Eddy (日文（日本）)' },
+  { lang: 'ja-JP', localService: false, name: 'cloud' },
+  { lang: 'ja-JP', localService: true, name: 'local' },
+  { lang: 'fr-FR', localService: true, name: 'Thomas' }
+];
+eq(LY.speechLang('ja'), 'ja-JP', '語言代碼轉成 BCP47');
+eq(LY.pickVoice('ja', VOICES).name, 'local',
+   '優先使用本機語音（雲端語音等同將文字送往供應商的伺服器），並略過 macOS 的趣味語音');
+ok(LY.pickVoice('ko', VOICES) === null, '沒有這個語言的語音就回 null');
+ok(LY.pickVoice('fr', VOICES).lang === 'fr-FR', '找得到法文');
+eq(LY.pickVoice('ja', [{ lang: 'ja-JP', localService: true, name: 'Grandma (日文（日本）)' }]).name,
+   'Grandma (日文（日本）)', '只剩趣味語音時仍須發聲');
+ok(LY.speak('bonjour', 'fr') === false, 'node 裡沒有 speechSynthesis，不要爆掉');
+
+finish();

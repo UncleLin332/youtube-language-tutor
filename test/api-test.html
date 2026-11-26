@@ -64,6 +64,24 @@
     </div>
   </div>
 
+  <div class="row two">
+    <div>
+      <label for="lang">學習語言</label>
+      <select id="lang">
+        <option value="fr">法文</option>
+        <option value="ja">日文（會多要假名讀音）</option>
+        <option value="en">英文</option>
+        <option value="ko">韓文</option>
+        <option value="es">西班牙文</option>
+        <option value="de">德文</option>
+      </select>
+    </div>
+    <div>
+      <label for="native">母語</label>
+      <select id="native"><option value="繁體中文">繁體中文</option></select>
+    </div>
+  </div>
+
   <div class="row">
     <label for="key">API key</label>
     <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="貼上你的 key">
@@ -85,7 +103,7 @@
 </main>
 
 <script type="module">
-import { callModel } from '../background/providers.js';
+import { callModel, analyzeJob } from '../background/providers.js';
 
 const MODELS = {
   gemini: ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-4-hydrogen'],
@@ -131,14 +149,18 @@ function render(data) {
   if (data.sentences.length) {
     add('<h2 style="font-size:13px;color:var(--dim)">逐句</h2>');
     for (const s of data.sentences) {
-      add('<div class="card"><div>' + esc(s.text) + '</div><div class="zh">' + esc(s.translation || '') +
+      add('<div class="card"><div>' + esc(s.text) + '</div>' +
+          (s.reading ? '<div class="zh">' + esc(s.reading) + '</div>' : '') +
+          '<div class="zh">' + esc(s.translation || '') +
           '</div><div class="zh" style="font-size:11px">行 ' + s.start_line + '–' + s.end_line + '</div></div>');
     }
   }
   if (data.vocab.length) {
     add('<h2 style="font-size:13px;color:var(--dim)">單字</h2>');
     for (const v of data.vocab) {
-      add('<div class="card"><span class="word">' + esc(v.word) + '</span><span class="pos">' + esc(v.pos || '') +
+      add('<div class="card"><span class="word">' + esc(v.word) + '</span>' +
+          (v.reading ? '<span class="pos">' + esc(v.reading) + '</span>' : '') +
+          '<span class="pos">' + esc(v.pos || '') +
           '</span>' + (v.lemma && v.lemma !== v.word ? '<span class="pos">← ' + esc(v.lemma) + '</span>' : '') +
           '<div>' + esc(v.meaning || '') + '</div>' +
           (v.note ? '<div class="zh">' + esc(v.note) + '</div>' : '') + '</div>');
@@ -147,7 +169,9 @@ function render(data) {
   if (data.phrases.length) {
     add('<h2 style="font-size:13px;color:var(--dim)">片語・口語</h2>');
     for (const p of data.phrases) {
-      add('<div class="card"><span class="word">' + esc(p.phrase) + '</span><div>' + esc(p.meaning || '') + '</div>' +
+      add('<div class="card"><span class="word">' + esc(p.phrase) + '</span>' +
+          (p.reading ? '<span class="pos">' + esc(p.reading) + '</span>' : '') +
+          '<div>' + esc(p.meaning || '') + '</div>' +
           (p.note ? '<div class="zh">' + esc(p.note) + '</div>' : '') + '</div>');
     }
   }
@@ -162,12 +186,14 @@ $('run').addEventListener('click', async () => {
   const key = $('key').value.trim();
   if (!key) { step('缺少 API key', 'err', '請先在上面貼上 key。'); return; }
 
+  const LANGS = { fr: '法文', en: '英文', ja: '日文', ko: '韓文', es: '西班牙文', de: '德文' };
   const settings = {
     provider: $('provider').value,
     model: $('model').value,
     apiKey: key,
-    nativeLang: '繁體中文',
-    langName: '法文'
+    nativeLang: $('native').value,
+    targetLang: $('lang').value,
+    langName: LANGS[$('lang').value] || $('lang').value
   };
   const lines = $('lines').value.split('\n').map((t) => t.trim()).filter(Boolean).map((text, i) => ({ i, text }));
 
@@ -179,7 +205,7 @@ $('run').addEventListener('click', async () => {
   $('run').disabled = true;
   const t0 = performance.now();
   try {
-    const data = await callModel(settings, lines, (p) => {
+    const data = await callModel(settings, analyzeJob(settings, lines), (p) => {
       const h3 = running.querySelector('h3');
       if (p.phase === 'request') {
         h3.lastChild.textContent = p.attempt === 1 ? '等待回應…' : `第 ${p.attempt}/${p.max} 次嘗試…`;

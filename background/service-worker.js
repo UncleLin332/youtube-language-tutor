@@ -3,12 +3,13 @@
 // 供應商的請求／解析邏輯在 providers.js，和 test/api-test.html 共用。
 import { callModel, analyzeJob, explainJob } from './providers.js';
 
-const CACHE_VERSION = 'v2';
+// v3：輸出新增日文的 reading（假名讀音）欄位。舊快取沒有此欄位，須更換版號，否則會持續取到沒有讀音的結果
+const CACHE_VERSION = 'v3';
 
 function cacheKey(req) {
   const s = req.segment;
   return [CACHE_VERSION, req.videoId, req.settings.provider, req.settings.model,
-    req.settings.nativeLang, Math.round(s.start), Math.round(s.end)].join(':');
+    req.settings.nativeLang, req.settings.targetLang || '', Math.round(s.start), Math.round(s.end)].join(':');
 }
 
 async function analyze(req) {

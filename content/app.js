@@ -446,6 +446,9 @@
       const t = (S.times && S.times[idx]) || sentenceTime(seg, sent);
       playRange(t.start, t.end, rate);
     },
+    // 單字／片語的語音合成。瀏覽器內建，不需額外權限，也不會送出任何文字。
+    // 回傳 false 代表此電腦未安裝該語言的語音，面板會改寫按鈕的提示文字。
+    speak: LY.canSpeak() ? (text) => LY.speak(text, S.settings.targetLang) : null,
     toggleEnabled: () => {
       S.enabled = !S.enabled;
       if (S.enabled) ensureAhead();
