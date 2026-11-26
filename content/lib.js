@@ -113,18 +113,22 @@
   // 必須自行分配：先將表面文字切成「漢字段／非漢字段」，非漢字段（送假名、助詞、標點）
   // 在讀音中必定照抄，以其為錨點，夾在中間的即為漢字段的讀音。
   //
-  // 漢字段的長度無法事先得知，因此採回溯：由一個假名開始嘗試，交由後續的段落驗證。
-  // 失敗過的 (段, 位置) 會記錄下來不再重試，最壞情況為段數 × 讀音長度。
+  // 標點是重要的錨點，因此先以「保留標點」嚴格對齊一次；失敗才退回「忽略標點」的寬鬆版，
+  // 因為模型回傳讀音時偶爾會省略標點。兩者都失敗才放棄。
+  //
+  // 漢字段的長度無法事先得知，只能逐一嘗試並由後續的段落驗證。可行的切法不只一種時
+  // （例如「今、私」之間只隔一個標點，寬鬆版就失去錨點），取最接近「一個漢字兩個假名」
+  // 的那一種：否則會切成 今(い)／私(まわたし)。
 
-  const KANJI = /[々〇㐀-䶿一-鿿豈-﫿]/;
+  const KANJI = /[々〇㐀-䶿一-鿿豈-﫿]/;
+  const KANA_PER_KANJI = 2;
 
   LY.hasKanji = (t) => KANJI.test(String(t || ''));
 
-  // 比對用的正規化：片假名轉平假名，並移除空白與標點
-  // （模型回傳讀音時常省略標點，保留只會導致對齊失敗）
-  const kana = (t) => String(t || '')
-    .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
-    .replace(/[\s　、。，．！？・…「」『』（）〈〉《》,.!?()"':;：；\-—]/g, '');
+  // 片假名轉平假名（兩邊都轉，比對才對得起來）
+  const hira = (t) => String(t || '').replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  // 寬鬆版還會移除空白與標點
+  const bare = (t) => hira(t).replace(/[\s　、。，．！？・…「」『』（）〈〉《》,.!?()"':;：；\-—]/g, '');
 
   function kanjiRuns(text) {
     const out = [];
@@ -137,52 +141,56 @@
     return out;
   }
 
-  // 回傳 [{ t: 表面文字, r: 假名（非漢字段為空字串） }]；無法對齊時回傳 null
-  LY.furigana = (text, reading) => {
-    const t = String(text || '');
-    const R = kana(reading);
-    if (!t || !R || !KANJI.test(t)) return null;
+  // 動態規劃：回傳成本最低的切法，無法對齊時回傳 null。
+  // 成本 = 每個漢字段「假名數與預期值的差距」之和，所以會自動避開極端的切法。
+  function align(segs, R, norm) {
+    const memo = new Map();
 
-    const segs = kanjiRuns(t);
-    // 異常長的輸入不值得花時間回溯
-    if (segs.length > 80 || R.length > 400) return null;
-
-    const dead = new Set();
-    const acc = [];
-
-    function walk(i, pos) {
-      if (i === segs.length) return pos === R.length ? acc.slice() : null;
+    function best(i, pos) {
+      if (i === segs.length) return pos === R.length ? { cost: 0, parts: [] } : null;
       const key = i + ':' + pos;
-      if (dead.has(key)) return null;
+      if (memo.has(key)) return memo.get(key);
+
       const seg = segs[i];
-      let found = null;
+      let out = null;
 
       if (!seg.kanji) {
-        const want = kana(seg.t);
-        // 純標點的段在讀音中沒有對應，直接跳過
-        if (!want) {
-          acc.push({ t: seg.t, r: '' });
-          found = walk(i + 1, pos);
-          acc.pop();
-        } else if (R.substr(pos, want.length) === want) {
-          acc.push({ t: seg.t, r: '' });
-          found = walk(i + 1, pos + want.length);
-          acc.pop();
-        }
+        const want = norm(seg.t);
+        // 寬鬆版會把純標點的段正規化成空字串，此時讀音中沒有對應，直接跳過
+        const ok = !want || R.substr(pos, want.length) === want;
+        const sub = ok ? best(i + 1, pos + want.length) : null;
+        if (sub) out = { cost: sub.cost, parts: [{ t: seg.t, r: '' }].concat(sub.parts) };
       } else {
+        const expect = KANA_PER_KANJI * [...seg.t].length;
         for (let len = 1; pos + len <= R.length; len++) {
-          acc.push({ t: seg.t, r: R.slice(pos, pos + len) });
-          found = walk(i + 1, pos + len);
-          acc.pop();
-          if (found) break;
+          const sub = best(i + 1, pos + len);
+          if (!sub) continue;
+          const cost = sub.cost + Math.abs(len - expect);
+          // 同分時保留先找到的（較短的），切法才不會偏向把假名全塞給前面的漢字
+          if (!out || cost < out.cost) {
+            out = { cost, parts: [{ t: seg.t, r: R.slice(pos, pos + len) }].concat(sub.parts) };
+          }
         }
       }
 
-      if (!found) dead.add(key);
-      return found;
+      memo.set(key, out);
+      return out;
     }
 
-    return walk(0, 0);
+    const r = best(0, 0);
+    return r ? r.parts : null;
+  }
+
+  // 回傳 [{ t: 表面文字, r: 假名（非漢字段為空字串） }]；無法對齊時回傳 null
+  LY.furigana = (text, reading) => {
+    const t = String(text || '');
+    if (!t || !reading || !KANJI.test(t)) return null;
+
+    const segs = kanjiRuns(t);
+    // 異常長的輸入不值得花時間嘗試
+    if (segs.length > 80 || hira(reading).length > 400) return null;
+
+    return align(segs, hira(reading), hira) || align(segs, bare(reading), bare);
   };
 
   // ---------- 單字發音（瀏覽器內建語音合成）----------
